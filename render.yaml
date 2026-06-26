@@ -1,0 +1,52 @@
+# Render blueprint — provisions a Postgres database alongside the API.
+# Apply via the "New > Blueprint" wizard at https://dashboard.render.com.
+#
+# Secret env vars (JWT_SECRET, ADMIN_PASSWORD, POS_PIN, GEMINI_API_KEY) must be
+# set manually in the Render dashboard once the service is created.
+# `sync: false` here keeps them out of source control.
+
+databases:
+  - name: cafe-db
+    plan: free
+    databaseName: cafe
+    user: cafe
+
+services:
+  - type: web
+    name: 456cafe-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: node dist-new/src/main.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Postgres — auto-wired from the database above
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cafe-db
+          property: connectionString
+
+      # Secrets (set in dashboard)
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: POS_PIN
+        sync: false
+
+      # CORS allowlist — set to comma-separated list of frontend origins
+      - key: CORS_ORIGIN
+        sync: false
+
+      # Optional AI key
+      - key: GEMINI_API_KEY
+        sync: false

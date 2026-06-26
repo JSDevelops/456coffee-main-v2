@@ -1,0 +1,33 @@
+# Local-only Postgres for development.
+# Production uses managed Postgres (Render, Neon, Supabase, etc.) — see SETUP.md.
+#
+# Usage:
+#   docker compose up -d postgres
+#   cd backend
+#   npx prisma migrate dev --name init
+#   npx prisma db seed
+#
+# Stop:    docker compose down
+# Reset:   docker compose down -v   (drops the volume — loses all data)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cafe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cafe
+      POSTGRES_PASSWORD: cafepw
+      POSTGRES_DB: cafe
+    ports:
+      - "5432:5432"
+    volumes:
+      - cafe-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cafe -d cafe"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  cafe-pgdata:

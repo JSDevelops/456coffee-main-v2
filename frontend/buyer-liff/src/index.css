@@ -1,0 +1,314 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ── Luxe palette: ivory · champagne · plum · rose · mint · lavender ─── */
+  --ink: #2b1530;            /* deep plum — primary text */
+  --ink-soft: #5a3f63;
+  --ink-mute: #8a728f;
+  --paper: #fff8ef;          /* ivory */
+  --paper-dim: #fbeedd;
+  --card: #ffffff;
+  --line: #e2c294;           /* stronger so white cards pop on cream */
+  --hairline: #ecd4a8;
+  --hairline-soft: #f3e2c2;
+
+  --accent: #f5b301;
+  --accent-deep: #b9530a;
+  --accent-soft: #fff3d3;
+  --cream: #ffe9bd;
+  --gold-1: #ffd166;
+  --gold-2: #f5b301;
+  --gold-3: #c98315;
+
+  --espresso: #2b1530;
+  --espresso-2: #4d2546;
+
+  --rose: #f43f7a;
+  --rose-soft: #ffe1ec;
+  --lavender: #8b5cf6;
+  --lavender-soft: #ece4ff;
+  --mint: #14b8a6;
+  --mint-soft: #d4fbf3;
+  --sage: #10b981;
+  --sage-soft: #d4fbf3;
+  --sky: #38bdf8;
+  --sky-soft: #def4ff;
+
+  --berry: var(--rose);
+  --berry-soft: var(--rose-soft);
+
+  --success: #10b981;
+  --success-soft: #d4fbf3;
+  --danger: #f43f5e;
+  --danger-soft: #ffe1ec;
+  --info: #6366f1;
+  --info-soft: #ece4ff;
+
+  /* Legacy aliases */
+  --coffee-dark: var(--ink);
+  --coffee-brown: var(--espresso);
+  --coffee-accent: var(--accent);
+  --coffee-bg: var(--paper);
+  --coffee-cream: var(--cream);
+  --accent-bg: var(--accent-soft);
+  --accent-border: var(--accent);
+  --border: var(--line);
+  --text: var(--ink);
+  --text-h: var(--espresso);
+  --social-bg: #ffffff;
+
+  --shadow-sm:   0 1px 2px rgba(43, 21, 48, 0.08);
+  --shadow-md:   0 14px 34px -18px rgba(185, 83, 10, 0.32);
+  --shadow-lg:   0 32px 80px -32px rgba(43, 21, 48, 0.32);
+  --shadow-pop:  0 22px 46px -22px rgba(245, 179, 1, 0.55);
+  --shadow-rose: 0 22px 46px -22px rgba(244, 63, 122, 0.45);
+
+  --app-font: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+html { font-size: 15px; }   /* reduce app-wide rem baseline */
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--app-font);
+  font-weight: 400;
+  letter-spacing: 0.002em;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--app-font);
+  font-weight: 600;            /* lighter, was 800-900 */
+  letter-spacing: -0.005em;
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-weight: inherit;
+}
+
+/* Sarabun reads well at standard weights — relax the bold modifiers */
+.font-black,
+.font-extrabold {
+  font-weight: 600 !important;   /* was 800-900 */
+}
+.font-bold {
+  font-weight: 600 !important;   /* was 700 */
+}
+.font-semibold {
+  font-weight: 500 !important;
+}
+
+/* Desktop backdrop */
+@media (min-width: 768px) {
+  body {
+    background:
+      radial-gradient(circle at 8% 6%,  rgba(245, 179, 1,  0.20), transparent 38%),
+      radial-gradient(circle at 92% 12%, rgba(244, 63, 122, 0.16), transparent 38%),
+      radial-gradient(circle at 88% 92%, rgba(139, 92, 246, 0.14), transparent 42%),
+      radial-gradient(circle at 12% 96%, rgba(20, 184, 166,  0.12), transparent 40%),
+      var(--paper);
+  }
+}
+
+/* ── Custom utilities ──────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.glass {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,248,239,0.82));
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+}
+
+.glass-dark {
+  background: rgba(43, 21, 48, 0.55);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+}
+
+/* Stronger hairlines so white cards POP on cream background */
+.hairline        { box-shadow: inset 0 0 0 1px var(--hairline), 0 2px 6px -2px rgba(43,21,48,0.10); }
+.hairline-strong { box-shadow: inset 0 0 0 1px var(--line),     0 4px 10px -3px rgba(43,21,48,0.14); }
+.hairline-gold   { box-shadow: inset 0 0 0 1px rgba(201, 131, 21, 0.55), 0 2px 6px -2px rgba(43,21,48,0.10); }
+
+.pop-shadow    { box-shadow: var(--shadow-md); }
+.pop-shadow-lg { box-shadow: var(--shadow-lg); }
+.pop-amber     { box-shadow: var(--shadow-pop); }
+.pop-rose      { box-shadow: var(--shadow-rose); }
+
+.ink       { color: var(--ink); }
+.ink-soft  { color: var(--ink-soft); }
+.ink-mute  { color: var(--ink-mute); }
+
+.bg-paper      { background: var(--paper); }
+.bg-paper-dim  { background: var(--paper-dim); }
+.bg-card       { background: var(--card); }
+.bg-cream      { background: var(--accent-soft); }
+
+.text-accent { color: var(--accent-deep); }
+
+/* Luxury gold gradient text */
+.text-gold {
+  background: linear-gradient(120deg, #c98315 0%, #f5b301 45%, #e08810 95%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Hero meshes */
+.mesh-warm {
+  background:
+    radial-gradient(circle at 8% 8%,  rgba(255, 209, 102, 0.85), transparent 46%),
+    radial-gradient(circle at 92% 12%, rgba(244, 63, 122, 0.55), transparent 46%),
+    radial-gradient(circle at 70% 100%, rgba(139, 92, 246, 0.55), transparent 48%),
+    linear-gradient(135deg, #2b1530 0%, #4d2546 48%, #b9530a 100%);
+}
+
+.mesh-cream {
+  background:
+    radial-gradient(circle at 16% 12%, rgba(255, 209, 102, 0.32), transparent 44%),
+    radial-gradient(circle at 88% 90%, rgba(244, 63, 122, 0.18), transparent 48%),
+    var(--paper);
+}
+
+/* Buyer LIFF home shell — bright, sunlit canvas */
+.buyer-shell-bg {
+  background:
+    radial-gradient(circle at 8% 0%,    rgba(255, 209, 102, 0.42), transparent 38%),
+    radial-gradient(circle at 100% 12%, rgba(244, 63, 122, 0.22), transparent 38%),
+    radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.20), transparent 42%),
+    radial-gradient(circle at 0% 92%,   rgba(20, 184, 166,  0.20), transparent 42%),
+    linear-gradient(180deg, #fff8ef 0%, #fffaf2 50%, #fdeed6 100%);
+}
+
+.buyer-hero {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(255, 209, 102, 0.95), transparent 36%),
+    radial-gradient(circle at 96% 16%, rgba(244, 63, 122, 0.72), transparent 38%),
+    radial-gradient(circle at 78% 108%, rgba(139, 92, 246, 0.78), transparent 44%),
+    radial-gradient(circle at 0% 100%, rgba(20, 184, 166,  0.55), transparent 44%),
+    linear-gradient(135deg, #2b1530 0%, #4d2546 48%, #1a0e2c 100%);
+  color: #fff;
+}
+
+.buyer-hero .buyer-hero-muted { color: rgba(255, 255, 255, 0.78); }
+.buyer-hero .buyer-hero-chip {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+/* Action cards — bright, jewel-tone gradients */
+.buyer-action-card {
+  color: #fff;
+  box-shadow: 0 22px 44px -28px rgba(43, 21, 48, 0.55);
+}
+.buyer-action-orange   { background: linear-gradient(135deg, #ff6a00 0%, #f5b301 55%, #ffd166 100%); }
+.buyer-action-green    { background: linear-gradient(135deg, #047857 0%, #10b981 55%, #6ee7b7 100%); }
+.buyer-action-pink     { background: linear-gradient(135deg, #be185d 0%, #f43f7a 55%, #fda4c0 100%); }
+.buyer-action-blue     { background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 55%, #c4b5fd 100%); }
+.buyer-action-mint     { background: linear-gradient(135deg, #0e7490 0%, #14b8a6 55%, #99f6e4 100%); }
+
+.buyer-contrast-dark { color: var(--ink); }
+.buyer-contrast-soft { color: var(--ink-soft); }
+
+/* Membership tiers */
+.tier-bronze { background: linear-gradient(135deg, #b45309 0%, #f59e0b 60%, #fde68a 100%); }
+.tier-silver { background: linear-gradient(135deg, #0f766e 0%, #14b8a6 55%, #99f6e4 100%); }
+.tier-gold   { background: linear-gradient(135deg, #c98315 0%, #f5b301 50%, #ff7eb6 100%); }
+
+/* Shimmer for skeletons */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #fbeedd 0%, #fff5e3 50%, #fbeedd 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 14px;
+}
+
+/* Pulse ring for live status */
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.55); }
+  70%  { box-shadow: 0 0 0 12px rgba(20, 184, 166, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+}
+.pulse-ring { animation: pulseRing 1.8s ease-out infinite; }
+
+/* Steam animation for splash */
+@keyframes steam {
+  0%   { transform: translateY(0) scaleX(1); opacity: 0; }
+  20%  { opacity: 0.6; }
+  100% { transform: translateY(-32px) scaleX(1.4); opacity: 0; }
+}
+.steam { animation: steam 2.4s ease-out infinite; transform-origin: bottom center; }
+.steam:nth-child(2) { animation-delay: 0.4s; }
+.steam:nth-child(3) { animation-delay: 0.8s; }
+
+/* Gentle float */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.float-y { animation: float-y 3s ease-in-out infinite; }
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 28s linear infinite; }
+
+@keyframes aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(0, -8px, 0) scale(1.05); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.aurora { animation: aurora 9s ease-in-out infinite; }
+
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+.pt-safe { padding-top:  max(env(safe-area-inset-top),    0.5rem); }
+
+.coffee-gradient {
+  background: linear-gradient(135deg, var(--accent-deep) 0%, var(--lavender) 100%);
+  color: #fff;
+}
+
+html { scroll-behavior: smooth; }
+::selection { background: var(--rose); color: #fff; }
+
+.gilded-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(245,179,1,0.6) 50%, transparent 100%);
+}
+
+/* Soft inner-glow border (used on premium cards) */
+.luxe-border {
+  position: relative;
+}
+.luxe-border::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,209,102,0.7), rgba(244,63,122,0.4) 45%, rgba(139,92,246,0.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}

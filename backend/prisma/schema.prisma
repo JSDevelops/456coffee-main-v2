@@ -1,0 +1,624 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// Local dev: run `docker compose up -d postgres` from repo root, then
+//            DATABASE_URL=postgresql://cafe:cafepw@localhost:5432/cafe in .env.
+// Production: use Render Postgres / Neon / Supabase connection string.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PREPARING
+  READY_FOR_QC      // Added
+  READY_FOR_PICKUP  // Added
+  DISPATCHED        // Added
+  READY             // Legacy, keeping for compat if needed but will use the others
+  COMPLETED
+  PICKED_UP
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PromotionType {
+  PERCENT          // ลด % จากยอดรวม
+  FIXED_AMOUNT     // ลดคงที่ (บาท)
+  BUY_X_GET_Y      // ซื้อ X แถม Y (ราคาต่ำสุดฟรี)
+  PRODUCT_DISCOUNT // ลด % หรือบาท เฉพาะสินค้าที่ระบุ
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  location  String?
+  address   String?
+  latitude  Float?
+  longitude Float?
+  isOpen        Boolean  @default(true)
+  openTime      String?
+  closeTime     String?
+  phone         String?
+  promptpayId   String?
+  promptpayName String?
+  imageUrl      String?
+  orders        Order[]
+  promotions    Promotion[]
+  inventory     Inventory[]
+  transactions  InventoryTransaction[]
+  cashflows     CashflowTransaction[]
+  managers      BranchManager[]
+  shifts        Shift[]
+  productStatuses BranchProductStatus[]
+  paymentDevices PaymentDevice[]
+  paymentEvents  IncomingPaymentEvent[]
+  schedules      StaffSchedule[]
+  monthlyPlans   MonthlyPlan[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Per-branch override for product availability. If a row exists for a
+// (branch, product) pair the branch's effective status is taken from here;
+// otherwise it inherits Product.status (set by HQ admin).
+//
+// The branch manager toggles AVAILABLE / OUT_OF_STOCK at their own branch
+// without touching the catalog-wide flag in Product.
+model BranchProductStatus {
+  id        String   @id @default(uuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status    String   // AVAILABLE | OUT_OF_STOCK
+  reason    String?
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, productId])
+  @@index([branchId, status])
+}
+
+// Per-branch cash shift. Tracks opening cash, closing cash, expected cash
+// (sum of CASH-paid orders during the shift), variance, and notes.
+model Shift {
+  id                    String    @id @default(uuid())
+  branchId              String
+  branch                Branch    @relation(fields: [branchId], references: [id])
+  openedAt              DateTime  @default(now())
+  openedBy              String?
+  openingCash           Float     @default(0)
+  closedAt              DateTime?
+  closedBy              String?
+  closingCash           Float?
+  expectedCash          Float?
+  cashOrdersTotal       Float?
+  variance              Float?
+  ordersCount           Int?
+  totalRevenue          Float?
+  note                  String?
+  status                String    @default("OPEN") // OPEN | CLOSED
+  
+  // Stock snapshot and performance metrics
+  openingStock          Json?     // Array of { ingredientId, name, unit, systemQty, actualQty, costPerUnit }
+  closingStock          Json?     // Array of { ingredientId, name, unit, expectedQty, actualQty, wasteQty, wasteReason, variance, costPerUnit }
+  stockVarianceCost     Float?    @default(0)
+  wasteCost             Float?    @default(0)
+  stockPerformanceScore Float?    @default(100)
+  stockPerformanceGrade String?   @default("A+")
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([branchId, status])
+  @@index([branchId, openedAt])
+}
+
+// Branch staff (managers, baristas, cashiers, etc.). Each row may hold an
+// individual numeric PIN used at the staff-login screen so each shift worker
+// gets their own credential instead of sharing the env POS_PIN.
+model BranchManager {
+  id        String   @id @default(uuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  name      String
+  email     String?
+  phone     String?
+  role      String   @default("BRANCH_MANAGER") // BRANCH_MANAGER | CASHIER | BARISTA | QC | DISPATCHER | STOCK
+  lineUid   String?
+  pin       String?  // 4-12 digit staff PIN (plaintext; in-store credential, low risk surface)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId, isActive])
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  icon        String?   // emoji or icon name
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  isVisible   Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id            String            @id @default(uuid())
+  name          String
+  description   String?
+  price         Float
+  categoryId    String?
+  category      Category?         @relation(fields: [categoryId], references: [id])
+  imageUrl      String?
+  status        String            @default("AVAILABLE") // AVAILABLE | OUT_OF_STOCK | HIDDEN
+  tags          String            @default("[]")        // JSON: ["Bestseller","New"]
+  platforms     String[]          @default([])          // [] = ทุก platform, มิฉะนั้นระบุ STORE|GRAB|LINE|SHOPEE|BOOTH|OTHER
+  platformPrices String           @default("{}")        // JSON: {"GRAB":95,"SHOPEE":95} ราคาเฉพาะช่องทาง
+  sortOrder     Int               @default(0)
+  optionGroups  MenuOptionGroup[]
+  recipes       Recipe[]
+  orderItems    OrderItem[]
+  branchStatuses BranchProductStatus[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model MenuOptionGroup {
+  id         String       @id @default(uuid())
+  productId  String
+  product    Product      @relation(fields: [productId], references: [id])
+  name       String       // e.g., "เลือก Size", "ความหวาน"
+  isRequired Boolean      @default(false)
+  maxSelect  Int          @default(1)
+  sortOrder  Int          @default(0)
+  options    MenuOption[]
+}
+
+model MenuOption {
+  id         String          @id @default(uuid())
+  groupId    String
+  group      MenuOptionGroup @relation(fields: [groupId], references: [id])
+  label      String          // e.g., "S", "M", "L"
+  priceAddon Float           @default(0)
+  isDefault  Boolean         @default(false)
+  sortOrder  Int             @default(0)
+}
+
+model Ingredient {
+  id            String   @id @default(uuid())
+  name          String
+  unit          String   // e.g., "ml", "g", "pcs"
+  costPerUnit   Float    @default(0) // Cost per base unit
+  sku           String?  // Optional internal SKU code
+  inventory     Inventory[]
+  transactions  InventoryTransaction[]
+  recipeItems   Recipe[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Inventory {
+  id           String     @id @default(uuid())
+  branchId     String
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Float
+  lowStockThreshold Float @default(100)
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([branchId, ingredientId])
+}
+
+model Recipe {
+  id           String     @id @default(uuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Float      // Amount required per product
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNo         String      @unique @default(uuid()) // human-friendly order number
+  branchId        String
+  branch          Branch      @relation(fields: [branchId], references: [id])
+  userId          String?     // Optional: Link to a registered User
+  user            User?       @relation(fields: [userId], references: [id])
+  customerUid     String      // Legacy/Guest identification (LINE UID or random)
+  customerName    String?
+  totalAmount     Float
+  discountAmount  Float       @default(0) // ส่วนลดที่ได้รับ
+  status          OrderStatus @default(PENDING)
+  fulfillmentType String      @default("PICKUP") // PICKUP | DELIVERY
+  note            String?     // special instructions
+  platform        String      @default("STORE")  // STORE | LINE | GRAB | FOODPANDA
+  riderName       String?
+  riderPhone      String?
+  qcNote          String?
+  scheduledAt     DateTime?   // pre-order pickup time
+  queueNo         Int         @default(0)
+  items           OrderItem[]
+  payment         Payment?
+  paymentEvents   IncomingPaymentEvent[]
+  promotions      OrderPromotion[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model User {
+  id              String         @id @default(uuid())
+  name            String?
+  email           String?        @unique
+  phone           String?        @unique
+  points          Int            @default(0)
+  role            String         @default("CUSTOMER") // CUSTOMER | ADMIN
+  authProviders   AuthProvider[]
+  addresses       Address[]      // New: Saved delivery locations
+  orders          Order[]
+  pointHistory    PointTransaction[] // New: Loyalty history
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Address {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  label           String   // e.g., "Home", "Office"
+  address         String
+  latitude        Float?
+  longitude       Float?
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PointTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  orderId     String?  // Optional: Link to an order
+  delta       Int      // e.g., +10 or -50
+  reason      String   // e.g., "Earned from Order #123", "Redeemed for Drink"
+  createdAt   DateTime @default(now())
+}
+
+model AuthProvider {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  provider    String   // LINE | GOOGLE | PHONE
+  providerId  String   @unique // The unique ID from the provider (e.g. LINE UID)
+  createdAt   DateTime @default(now())
+}
+
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  quantity      Int      @default(1)
+  unitPrice     Float    // base menu price at time of order
+  optionsPrice  Float    @default(0) // total addon price
+  price         Float    // final: (unitPrice + optionsPrice) * quantity
+  productName   String?  // snapshot: name at order time
+  customization Json?    // { sweetness: "50%", milk: "oat", size: "L" }
+  selectedOptions Json?  // snapshot: [{ group: "Size", label: "L", priceAddon: 20 }]
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  amount        Float
+  status        PaymentStatus @default(UNPAID)
+  method        String        @default("CASH") // CASH | QR | TRANSFER | ONLINE
+  transactionId String?
+  qrPayload     String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model PaymentDevice {
+  id           String   @id @default(uuid())
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name         String
+  username     String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  lastSeenAt   DateTime?
+  events       IncomingPaymentEvent[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([branchId, isActive])
+}
+
+model IncomingPaymentEvent {
+  id            String         @id @default(uuid())
+  branchId      String?
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  deviceId      String?
+  device        PaymentDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  matchedOrderId String?
+  matchedOrder  Order?         @relation(fields: [matchedOrderId], references: [id], onDelete: SetNull)
+  source        String
+  sender        String
+  packageName   String?
+  message       String
+  rawTimestamp  DateTime?
+  amount        Float?
+  currency      String?        @default("THB")
+  bankCode      String?
+  status        String         @default("RECEIVED") // RECEIVED | MATCHED | UNMATCHED | AMBIGUOUS | IGNORED
+  note          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([branchId, createdAt])
+  @@index([branchId, status])
+  @@index([matchedOrderId])
+}
+
+// Generic key-value store for runtime-tweakable system settings
+// (font, theme color, etc.). Read-public so every frontend can hydrate;
+// write-admin only.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String
+  userId    String?  // Optional: User who performed the action
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
+model InventoryTransaction {
+  id           String     @id @default(uuid())
+  branchId     String
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  type         String     // STOCK_IN | STOCK_OUT | WASTE | ADJUSTMENT | ORDER_DEDUCTION
+  quantity     Float      // positive for IN, negative for OUT
+  unitCost     Float      // cost per unit at transaction time
+  totalCost    Float      // derived: quantity * unitCost
+  referenceId  String?    // e.g. orderId, PO number
+  note         String?
+  createdAt    DateTime   @default(now())
+  createdBy    String?    // user ID who made the transaction
+}
+
+model CashflowTransaction {
+  id           String     @id @default(uuid())
+  branchId     String
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  type         String     // INCOME | EXPENSE
+  category     String     // e.g. SALES, INGREDIENTS, SALARY, UTILITIES, RENT, MISC
+  amount       Float
+  note         String?
+  referenceId  String?    // e.g. orderId or inventoryTransactionId
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdBy    String?    // Admin ID
+}
+
+// ─── Promotion / Discount System ────────────────────────────────────────────
+
+model Promotion {
+  id              String        @id @default(uuid())
+  branchId        String?       // null = ใช้ได้ทุกสาขา
+  branch          Branch?       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name            String        // ชื่อโปรโมชั่น
+  description     String?       // รายละเอียด
+  code            String?       @unique  // coupon code (optional, e.g. "COFFEE10")
+  type            PromotionType
+  value           Float         // % หรือ บาท
+  minOrderAmount  Float         @default(0)  // ยอดขั้นต่ำ
+  productIds      String[]      @default([]) // [] = ทุกสินค้า
+  buyQty          Int?          // BUY_X_GET_Y: ซื้อกี่ชิ้น
+  getQty          Int?          // BUY_X_GET_Y: แถมกี่ชิ้น
+  startDate       DateTime?     // เริ่มใช้ได้ตั้งแต่
+  endDate         DateTime?     // หมดอายุ
+  usageLimit      Int?          // จำนวนครั้งสูงสุด (null = ไม่จำกัด)
+  usageCount      Int           @default(0)  // ใช้ไปแล้วกี่ครั้ง
+  maxDiscount     Float?        // จำกัดส่วนลดสูงสุด (สำหรับ PERCENT)
+  isActive        Boolean       @default(true)
+  createdBy       String?       // userId ที่สร้าง
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  orders          OrderPromotion[]
+
+  @@index([branchId, isActive])
+  @@index([code])
+}
+
+model OrderPromotion {
+  id             String    @id @default(uuid())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  promotionId    String
+  promotion      Promotion @relation(fields: [promotionId], references: [id])
+  discountAmount Float     // ส่วนลดที่ได้รับ
+  createdAt      DateTime  @default(now())
+
+  @@unique([orderId, promotionId])
+}
+
+// ════════════════════════════════════════════════════════════
+// HR — Attendance, Leave, Salary, Payslip
+// ════════════════════════════════════════════════════════════
+
+model AttendanceRecord {
+  id          String    @id @default(uuid())
+  staffId     String    // BranchManager.id
+  staffName   String    // denormalized for quick display
+  branchId    String
+  date        String    // "YYYY-MM-DD" stored as string for easy grouping
+  clockIn     DateTime
+  clockOut    DateTime?
+  hoursWorked Float?    // computed when clocking out
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([branchId, date])
+  @@index([staffId])
+}
+
+enum LeaveType {
+  SICK      // ลาป่วย
+  PERSONAL  // ลากิจ
+  VACATION  // ลาพักร้อน
+  OTHER     // อื่นๆ
+}
+
+enum LeaveStatus {
+  PENDING   // รออนุมัติ
+  APPROVED  // อนุมัติ
+  REJECTED  // ปฏิเสธ
+}
+
+model LeaveRequest {
+  id        String      @id @default(uuid())
+  staffId   String      // BranchManager.id
+  staffName String      // denormalized
+  branchId  String
+  type      LeaveType   @default(PERSONAL)
+  startDate String      // "YYYY-MM-DD"
+  endDate   String      // "YYYY-MM-DD"
+  days      Int         @default(1)
+  reason    String?
+  status    LeaveStatus @default(PENDING)
+  managerNote String?   // หมายเหตุผู้จัดการเมื่ออนุมัติ/ปฏิเสธ
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([branchId, status])
+  @@index([staffId])
+}
+
+enum PayType {
+  MONTHLY // รายเดือน
+  HOURLY  // รายชั่วโมง
+  DAILY   // รายวัน
+}
+
+model StaffSalary {
+  id         String   @id @default(uuid())
+  staffId    String   @unique // BranchManager.id
+  staffName  String   // denormalized
+  branchId   String
+  payType    PayType  @default(MONTHLY)
+  baseSalary Float    @default(0)  // เงินเดือน (MONTHLY) หรือค่าจ้างต่อวัน (DAILY)
+  hourlyRate Float    @default(0)  // ค่าจ้างต่อชั่วโมง (HOURLY)
+  socialSec  Float    @default(0)  // ประกันสังคมหัก/เดือน
+  tax        Float    @default(0)  // ภาษีหัก ณ ที่จ่าย/เดือน
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([branchId])
+}
+
+model Payslip {
+  id          String    @id @default(uuid())
+  staffId     String
+  staffName   String
+  branchId    String
+  month       Int       // 1-12
+  year        Int
+  baseSalary  Float     // เงินเดือนพื้นฐาน
+  overtimePay Float     @default(0) // OT
+  bonus       Float     @default(0) // โบนัส
+  deductions  Float     @default(0) // หักทั้งหมด (ประกันสังคม + ภาษี + ขาดงาน)
+  netPay      Float     // รับสุทธิ
+  hoursWorked Float     @default(0) // รวมชั่วโมงทำงาน
+  daysWorked  Int       @default(0) // วันที่มาทำงาน
+  daysAbsent  Int       @default(0) // วันขาดงาน
+  daysLeave   Int       @default(0) // วันลา
+  paidAt      DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([staffId, month, year])
+  @@index([branchId, year, month])
+}
+
+model StaffSchedule {
+  id          String   @id @default(uuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  staffId     String   // BranchManager.id
+  staffName   String   // denormalized
+  date        String   // "YYYY-MM-DD"
+  shiftType   String   // MORNING | AFTERNOON | NIGHT | FULL_DAY
+  startTime   String   // e.g. "08:00"
+  endTime     String   // e.g. "17:00"
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([branchId, staffId, date])
+  @@index([branchId, date])
+}
+
+model MonthlyPlan {
+  id          String   @id @default(uuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  title       String   
+  date        String   
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([branchId, date])
+}
+
+model Announcement {
+  id             String    @id @default(uuid())
+  title          String
+  content        String    @db.Text
+  type           String    // "TRAINING" | "COURSE" | "EVENT" | "GENERAL"
+  targetBranches String[]  // Array of branchId, ["ALL"] for all branches
+  targetAudience String    @default("MANAGER") // "MANAGER" | "CUSTOMER"
+  pinned         Boolean   @default(false)
+  startDate      String?   // Optional start date/time of event/training
+  endDate        String?   // Optional end date/time of event/training
+  responseUrl    String?   // Optional URL for response / registration / feedback
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([targetBranches])
+  @@index([targetAudience])
+}

@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   DESIGN TOKENS — Light (default)
+   ============================================================ */
+:root,
+[data-theme="light"] {
+  --bg:           #fafafa;
+  --surface:      #ffffff;
+  --surface-2:    #f5f5f7;
+  --surface-3:    #ececef;
+  --hover:        rgba(0, 0, 0, 0.04);
+
+  --border:        #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  --text:        #18181b;
+  --text-2:      #3f3f46;
+  --text-muted:  #71717a;
+  --text-faint:  #a1a1aa;
+
+  --accent:       #ea580c;
+  --accent-2:     #f97316;
+  --accent-soft:  rgba(234, 88, 12, 0.10);
+  --accent-fg:    #ffffff;
+
+  --success:       #059669;
+  --success-soft:  rgba(5, 150, 105, 0.12);
+  --warning:       #d97706;
+  --warning-soft:  rgba(217, 119, 6, 0.12);
+  --danger:        #dc2626;
+  --danger-soft:   rgba(220, 38, 38, 0.10);
+  --info:          #0891b2;
+  --info-soft:     rgba(8, 145, 178, 0.10);
+
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow:     0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.10);
+  --shadow-xl:  0 32px 80px rgba(0, 0, 0, 0.16);
+
+  --ring:        0 0 0 3px rgba(234, 88, 12, 0.18);
+
+  /* Legacy aliases — kept so any unmigrated component still renders. */
+  --bg-main: var(--bg);
+  --bg-card: var(--surface);
+  --bg-hover: var(--hover);
+  --border-color: var(--border);
+  --text-main: var(--text);
+}
+
+/* ============================================================
+   DESIGN TOKENS — Dark
+   ============================================================ */
+[data-theme="dark"] {
+  --bg:           #09090b;
+  --surface:      #131317;
+  --surface-2:    #1c1c22;
+  --surface-3:    #27272d;
+  --hover:        rgba(255, 255, 255, 0.04);
+
+  --border:        #27272a;
+  --border-strong: #3f3f46;
+
+  --text:        #fafafa;
+  --text-2:      #d4d4d8;
+  --text-muted:  #a1a1aa;
+  --text-faint:  #71717a;
+
+  --accent:       #f97316;
+  --accent-2:     #fb923c;
+  --accent-soft:  rgba(249, 115, 22, 0.18);
+  --accent-fg:    #ffffff;
+
+  --success:       #10b981;
+  --success-soft:  rgba(16, 185, 129, 0.18);
+  --warning:       #f59e0b;
+  --warning-soft:  rgba(245, 158, 11, 0.18);
+  --danger:        #ef4444;
+  --danger-soft:   rgba(239, 68, 68, 0.18);
+  --info:          #06b6d4;
+  --info-soft:     rgba(6, 182, 212, 0.18);
+
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow:     0 4px 16px rgba(0, 0, 0, 0.50);
+  --shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.60);
+  --shadow-xl:  0 32px 80px rgba(0, 0, 0, 0.70);
+
+  --ring:        0 0 0 3px rgba(249, 115, 22, 0.30);
+
+  --bg-main: var(--bg);
+  --bg-card: var(--surface);
+  --bg-hover: var(--hover);
+  --border-color: var(--border);
+  --text-main: var(--text);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+* { box-sizing: border-box; }
+
+html { font-size: 15px; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--app-font, 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color .25s ease, color .25s ease;
+  line-height: 1.55;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar      { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.num {
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ============================================================
+   LEGACY HELPERS — kept for unmigrated pages
+   ============================================================ */
+.admin-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 12px;
+  transition: all 0.18s ease;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+.sidebar-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.sidebar-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 40%,
+    var(--surface-2) 80%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
