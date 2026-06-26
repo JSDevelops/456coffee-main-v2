@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">456 Cafe Payment Bridge</string>
+    <string name="app_name_subtitle">ระบบดักจับแจ้งเตือนการชำระเงิน</string>
+    
+    <!-- Status Card -->
+    <string name="status_active">ทำงานอยู่</string>
+    <string name="status_inactive">ปิดการใช้งาน</string>
+    <string name="status_forwarding_on">ระบบกำลังดักจับข้อมูล</string>
+    <string name="status_system_off">แตะสวิตช์เพื่อเริ่มต้น</string>
+    
+    <!-- Source Settings -->
+    <string name="section_source">แหล่งข้อมูล</string>
+    <string name="source_sms_title">SMS</string>
+    <string name="source_sms_subtitle">ดักจับ SMS จากธนาคาร</string>
+    <string name="source_notification_title">การแจ้งเตือน (Push)</string>
+    <string name="source_notification_enabled">เปิดใช้งานแล้ว</string>
+    <string name="source_notification_permission_required">ต้องเปิดสิทธิ์การเข้าถึง</string>
+    <string name="tap_to_grant_permission">แตะเพื่อเปิดสิทธิ์</string>
+    
+    <!-- API Settings -->
+    <string name="section_api_settings">ตั้งค่า API</string>
+    <string name="label_api_url">API URL</string>
+    <string name="placeholder_api_url">https://your-domain.com</string>
+    <string name="label_secret_key">Secret Key</string>
+    <string name="placeholder_secret_key">รหัสความปลอดภัย</string>
+    <string name="btn_test_connection">ทดสอบการเชื่อมต่อ</string>
+    <string name="status_connecting">กำลังเชื่อมต่อ...</string>
+    <string name="status_connected">เชื่อมต่อสำเร็จ</string>
+    <string name="status_connection_failed">เชื่อมต่อไม่สำเร็จ</string>
+    
+    <!-- Logs -->
+    <string name="section_recent_logs">ประวัติการส่งล่าสุด</string>
+    <string name="btn_show">แสดง</string>
+    <string name="btn_hide">ซ่อน</string>
+    <string name="btn_clear">ล้างประวัติ</string>
+    <string name="no_recent_activity">ยังไม่มีรายการ</string>
+    <string name="log_ignored_unknown">ข้าม (แอปที่ไม่รู้จัก)</string>
+    
+    <!-- Permissions & Toasts -->
+    <string name="toast_sms_granted">✅ สิทธิ์ SMS พร้อมใช้งาน</string>
+    <string name="toast_sms_denied">❌ กรุณาให้สิทธิ์ SMS เพื่อดักจับข้อความ</string>
+    
+    <!-- Banks -->
+    <string name="section_supported_banks">ธนาคารที่รองรับ</string>
+    <string name="bank_list">SCB • KBANK • KTB • BBL • BAY • GSB • TTB • CIMB • KKP • LINE BK • TrueMoney</string>
+    
+    <!-- Notification Channel -->
+    <string name="channel_name">SMS Forwarder Service</string>
+    <string name="channel_description">แสดงสถานะการทำงานของ Service</string>
+    <string name="notification_title">กำลังตรวจสอบยอดเงิน</string>
+    <string name="notification_text">ทำงานเบื้องหลังเพื่อดักจับรายการเงินเข้า</string>
+    
+    <!-- Login -->
+    <string name="login_title">เข้าสู่ระบบ</string>
+    <string name="login_subtitle">ใช้บัญชีอุปกรณ์ Android ที่สร้างจากหลังบ้านเพื่อเชื่อมต่อเครื่องนี้</string>
+    <string name="label_username">ชื่อผู้ใช้</string>
+    <string name="label_password">รหัสผ่าน</string>
+    <string name="btn_login">เข้าสู่ระบบ</string>
+    <string name="btn_logout">ออกจากระบบ</string>
+    <string name="login_failed">เข้าสู่ระบบไม่สำเร็จ</string>
+    <string name="session_expired">เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่</string>
+    <string name="logging_in">กำลังเข้าสู่ระบบ...</string>
+    <string name="account_disabled">บัญชีถูกระงับการใช้งาน</string>
+</resources>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#6366F1</color>
+    <color name="primary_dark">#4F46E5</color>
+    <color name="primary_light">#818CF8</color>
+    
+    <!-- Background Colors -->
+    <color name="background_dark">#0F172A</color>
+    <color name="card_background">#1E293B</color>
+    <color name="input_background">#334155</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    
+    <!-- Status Colors -->
+    <color name="green">#22C55E</color>
+    <color name="green_light">#86EFAC</color>
+    <color name="red">#EF4444</color>
+    <color name="red_light">#FCA5A5</color>
+    <color name="yellow">#F59E0B</color>
+    <color name="orange">#F97316</color>
+    
+    <!-- UI Colors -->
+    <color name="divider">#334155</color>
+    <color name="switch_track">#475569</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    
+    <!-- Status Badge Backgrounds -->
+    <color name="status_success_bg">#1A22C55E</color>
+    <color name="status_error_bg">#1AEF4444</color>
+    <color name="status_pending_bg">#1AF59E0B</color>
+    
+    <!-- Bank Colors -->
+    <color name="bank_scb">#4E2A82</color>
+    <color name="bank_kbank">#138F2D</color>
+    <color name="bank_ktb">#1BA5E0</color>
+    <color name="bank_bbl">#1E3A8A</color>
+    <color name="bank_bay">#FFC107</color>
+    <color name="bank_gsb">#E91E8C</color>
+    <color name="bank_ttb">#FC4C02</color>
+    <color name="bank_cimb">#EC1C23</color>
+    <color name="bank_line">#06C755</color>
+    <color name="bank_truemoney">#FF8C00</color>
+</resources>

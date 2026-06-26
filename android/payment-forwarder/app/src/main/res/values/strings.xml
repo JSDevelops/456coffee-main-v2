@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">456 Cafe Payment Bridge</string>
+    <string name="app_name_subtitle">Payment notification forwarder</string>
+    
+    <!-- Status Card -->
+    <string name="status_active">ACTIVE</string>
+    <string name="status_inactive">INACTIVE</string>
+    <string name="status_forwarding_on">Forwarding is ON</string>
+    <string name="status_system_off">System is OFF</string>
+    
+    <!-- Source Settings -->
+    <string name="section_source">SOURCE</string>
+    <string name="source_sms_title">SMS</string>
+    <string name="source_sms_subtitle">Forward bank SMS</string>
+    <string name="source_notification_title">Push Notifications</string>
+    <string name="source_notification_enabled">Enabled</string>
+    <string name="source_notification_permission_required">Permission required</string>
+    <string name="tap_to_grant_permission">Tap to grant permission</string>
+    
+    <!-- API Settings -->
+    <string name="section_api_settings">API SETTINGS</string>
+    <string name="label_api_url">API URL</string>
+    <string name="placeholder_api_url">https://your-domain.com</string>
+    <string name="label_secret_key">Secret Key</string>
+    <string name="placeholder_secret_key">••••••••••••</string>
+    <string name="btn_test_connection">TEST CONNECTION</string>
+    <string name="status_connecting">CONNECTING...</string>
+    <string name="status_connected">CONNECTED</string>
+    <string name="status_connection_failed">CONNECTION FAILED</string>
+    
+    <!-- Logs -->
+    <string name="section_recent_logs">RECENT LOGS</string>
+    <string name="btn_show">Show</string>
+    <string name="btn_hide">Hide</string>
+    <string name="btn_clear">Clear</string>
+    <string name="no_recent_activity">No recent activity</string>
+    <string name="log_ignored_unknown">IGNORED (Unknown App)</string>
+    
+    <!-- Permissions & Toasts -->
+    <string name="toast_sms_granted">✅ SMS Permission Granted</string>
+    <string name="toast_sms_denied">❌ Please grant SMS permission</string>
+    
+    <!-- Banks -->
+    <string name="section_supported_banks">Supported Banks</string>
+    <string name="bank_list">SCB • KBANK • KTB • BBL • BAY • GSB • TTB • CIMB • KKP • LINE BK • TrueMoney</string>
+    
+    <!-- Notification Channel -->
+    <string name="channel_name">SMS Forwarder Service</string>
+    <string name="channel_description">Shows background service status</string>
+    <string name="notification_title">Monitoring Active</string>
+    <string name="notification_text">Forwarding SMS and Notifications in background</string>
+    
+    <!-- Login -->
+    <string name="login_title">Login</string>
+    <string name="login_subtitle">Sign in with the Android forwarder account created by admin HQ</string>
+    <string name="label_username">Username</string>
+    <string name="label_password">Password</string>
+    <string name="btn_login">LOGIN</string>
+    <string name="btn_logout">Logout</string>
+    <string name="login_failed">Login failed</string>
+    <string name="session_expired">Session expired. Please login again</string>
+    <string name="logging_in">Logging in...</string>
+    <string name="account_disabled">Account disabled</string>
+</resources>
