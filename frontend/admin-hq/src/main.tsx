@@ -18,7 +18,10 @@ import { bootstrapSettings, applySettings } from './lib/applySettings'
 bootstrapSettings();
 
 // Live-update settings whenever an admin saves new ones.
-const settingsSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001');
+const defaultSocketUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? 'https://api.cafe-coffee.shop'
+  : 'http://localhost:5001';
+const settingsSocket = io(import.meta.env.VITE_API_URL || defaultSocketUrl);
 settingsSocket.on('settings-updated', (settings: Record<string, string>) => {
   applySettings(settings);
 });
