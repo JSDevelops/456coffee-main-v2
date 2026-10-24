@@ -10,6 +10,7 @@ import {
   Search,
   X,
   Wallet,
+  Download,
 } from 'lucide-react';
 import { api } from '../api';
 import {
@@ -157,6 +158,42 @@ export default function FinanceLedger() {
     (datePreset !== '30d' ? 1 : 0) + (typeFilter ? 1 : 0) + (categoryFilter ? 1 : 0) + (search ? 1 : 0);
   const reset = () => { setDatePreset('30d'); setTypeFilter(''); setCategoryFilter(''); setSearch(''); };
 
+  const handleExportCsv = () => {
+    if (!filtered || filtered.length === 0) {
+      toast.error('ไม่มีข้อมูลรายการสำหรับ Export');
+      return;
+    }
+
+    const headers = ['วันที่เวลา', 'ประเภท', 'หมวดหมู่', 'จำนวนเงิน (บาท)', 'หมายเหตุ'];
+    const rows = filtered.map((tx) => {
+      const dateStr = new Date(tx.createdAt).toLocaleString('th-TH');
+      const typeLabel = tx.type === 'INCOME' ? 'รายรับ' : 'รายจ่าย';
+      const catLabel = CATEGORY_LABEL[tx.category] || tx.category;
+      const noteStr = (tx.note || '').replace(/"/g, '""');
+      return [
+        `"${dateStr}"`,
+        `"${typeLabel}"`,
+        `"${catLabel}"`,
+        tx.amount.toFixed(2),
+        `"${noteStr}"`,
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateTag = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.setAttribute('download', `456coffee_cashflow_${dateTag}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`ส่งออก ${filtered.length} รายการเป็น CSV สำเร็จ`);
+  };
+
   return (
     <>
       <PageHeader
@@ -170,6 +207,7 @@ export default function FinanceLedger() {
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export CSV</Button>
             <Button leftIcon={<Plus size={14} />} disabled={!branchId} onClick={() => setModalOpen(true)}>ลงบันทึก</Button>
           </>
         }

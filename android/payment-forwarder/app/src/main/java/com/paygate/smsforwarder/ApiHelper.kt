@@ -16,16 +16,25 @@ object ApiHelper {
 
     private const val TAG = "ApiHelper"
     
-    // Leave blank by default — operator should point the app at the active 456 Cafe API.
-    const val DEFAULT_API_URL = ""
+    // Production default: points to active 456 Cafe API on Railway
+    const val DEFAULT_API_URL = "https://api.cafe-coffee.shop"
 
     /**
      * Get API URL from SharedPreferences or use default
      */
-    private fun getApiUrl(context: Context): String {
+    fun getApiUrl(context: Context): String {
         val prefs = context.getSharedPreferences("PayGateSMS", Context.MODE_PRIVATE)
         val savedUrl = prefs.getString("api_url", "") ?: ""
         return if (savedUrl.isNotEmpty()) savedUrl else DEFAULT_API_URL
+    }
+
+    /**
+     * Save API URL to SharedPreferences
+     */
+    fun setApiUrl(context: Context, url: String) {
+        val prefs = context.getSharedPreferences("PayGateSMS", Context.MODE_PRIVATE)
+        val cleaned = url.trim().removeSuffix("/")
+        prefs.edit().putString("api_url", cleaned).apply()
     }
 
     /**

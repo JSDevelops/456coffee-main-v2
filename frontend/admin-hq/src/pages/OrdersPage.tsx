@@ -444,6 +444,67 @@ export default function OrdersPage() {
     w.document.close();
   };
 
+  const handleExportCsv = () => {
+    if (!orders || orders.length === 0) {
+      toast.error('ไม่มีข้อมูลออเดอร์สำหรับ Export');
+      return;
+    }
+
+    const headers = [
+      'Order No',
+      'Date/Time',
+      'Branch',
+      'Customer',
+      'Items Count',
+      'Items Detail',
+      'Total Amount (THB)',
+      'Payment Method',
+      'Payment Status',
+      'Order Status',
+      'Fulfillment',
+    ];
+
+    const rows = orders.map((o) => {
+      const branchName = o.branch?.name || '-';
+      const customer = o.customerName || o.customerUid || '-';
+      const itemsCount = o.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 0;
+      const itemsDetail = (o.items || [])
+        .map((it) => `${it.product?.name || it.productName || 'สินค้า'} x${it.quantity}`)
+        .join('; ');
+      const paymentMethod = o.payment?.method || '-';
+      const paymentStatus = o.payment?.status || '-';
+      const dateStr = new Date(o.createdAt).toLocaleString('th-TH');
+
+      return [
+        `"${o.orderNo}"`,
+        `"${dateStr}"`,
+        `"${branchName.replace(/"/g, '""')}"`,
+        `"${customer.replace(/"/g, '""')}"`,
+        itemsCount,
+        `"${itemsDetail.replace(/"/g, '""')}"`,
+        o.totalAmount.toFixed(2),
+        `"${paymentMethod}"`,
+        `"${paymentStatus}"`,
+        `"${o.status}"`,
+        `"${o.fulfillmentType || '-'}"`,
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateTag = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.setAttribute('download', `456coffee_orders_${dateTag}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`ส่งออก ${orders.length} ออเดอร์เป็นไฟล์ CSV สำเร็จ`);
+  };
+
   // ─── Render ────────────────────────────────────────────────────────────
   return (
     <>
@@ -456,8 +517,8 @@ export default function OrdersPage() {
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
             </Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />}>
-              Export
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>
+              Export CSV
             </Button>
           </>
         }

@@ -1,142 +1,65 @@
 # 456 Coffee Ecosystem - Quick Links Reference
 
-**สำคัญ:** ต้องรันคำสั่ง `npm run start:dev` ในแต่ละโฟลเดอร์ก่อนจะเข้าลิ๊งค์ได้
+เอกสารสรุปลิงก์การใช้งานทั้งระดับ **Production (ออนไลน์)** และ **Local Development (เครื่องพัฒนา)**
 
 ---
 
-## 🚀 ลิ๊งค์เข้าหน้าเว็บทั้งหมด
+## 🌐 1. ลิงก์ระบบออนไลน์ (Production Links)
 
-### ✅ ใช้งานได้ (Ready to Use)
-
-**Backend API Server (Port 3000)**
-```
-🔗 http://localhost:3000
-📝 API Endpoints: http://localhost:3000/api
-🔌 WebSocket: ws://localhost:3000
-```
-
-**Translator Service (Port 5176)** 
-```
-🔗 http://localhost:5176
-✨ No errors - Ready to use
-```
+| บริการ / แพลตฟอร์ม | ลิงก์ออนไลน์ | โฮสติ้ง | สถานะ |
+|---|---|---|---|
+| **Admin HQ Dashboard** | 🔗 **https://465coffee.vercel.app** | Vercel | ✅ พร้อมใช้งาน |
+| **Backend REST & WS API** | 🔗 **https://api.cafe-coffee.shop/api** | Railway | ✅ พร้อมใช้งาน |
+| **Backend Healthcheck** | 🔗 **https://api.cafe-coffee.shop/api/health** | Railway | ✅ Status: OK |
+| **GitHub Repository** | 🔗 **https://github.com/JSDevelops/456coffee-main-v2** | GitHub | ✅ Active |
 
 ---
 
-### 🟡 ต้องแก้ไขก่อน (Needs Fixes)
+## 💻 2. ลิงก์สำหรับพัฒนาในเครื่อง (Local Development)
 
-**Admin HQ Dashboard (Port 5173)**
-```
-🔗 http://localhost:5173
-📊 Dashboard, Branch Management, Orders
-❌ 20 TypeScript errors - ต้องแก้ไข
-```
-
-**Branch POS System (Port 5174)**
-```
-🔗 http://localhost:5174
-🛒 Point of Sale, Kitchen Display, Dispatch
-❌ 30+ TypeScript errors - ต้องแก้ไข
-```
-
-**Buyer LIFF App (Port 5175)**
-```
-🔗 http://localhost:5175
-📱 Customer App, Shopping Cart, Orders
-❌ Critical errors - ต้องแก้ไขก่อน
-```
+| บริการ | ลิงก์ในเครื่อง | พอร์ต | คำสั่งเปิดเฉพาะส่วน |
+|---|---|---|---|
+| **Backend API** | http://localhost:5001/api | `5001` | `npm --prefix backend run start:dev` |
+| **Admin HQ** | http://localhost:5173 | `5173` | `npm --prefix frontend/admin-hq run dev` |
+| **Branch POS** | http://localhost:5174 | `5174` | `npm --prefix frontend/branch-pos run dev` |
+| **Buyer LIFF** | http://localhost:5175 | `5175` | `npm --prefix frontend/buyer-liff run dev` |
+| **Translator** | http://localhost:5176 | `5176` | `npm --prefix frontend/translator run dev` |
+| **Prisma Studio (DB GUI)**| http://localhost:5555 | `5555` | `npm --prefix backend run prisma:studio` |
 
 ---
 
-## 📊 สรุปลิ๊งค์
+## 🚀 3. คำสั่งลัดใช้งานบ่อย (Root Project)
 
-| ชื่อ | ลิ๊งค์ | ประเภท | สถานะ |
-|------|------|--------|------|
-| Backend API | http://localhost:3000 | API Server | ✅ Ready |
-| Admin HQ | http://localhost:5173 | Dashboard | 🟡 Fixing |
-| Branch POS | http://localhost:5174 | POS System | 🟡 Fixing |
-| Buyer LIFF | http://localhost:5175 | Customer App | 🔴 Fixing |
-| Translator | http://localhost:5176 | Translation | ✅ Ready |
-
----
-
-## 🎯 คำสั่งเริ่มต้น
-
-### เปิด Backend ก่อน (Terminal 1)
 ```bash
-cd backend
-npm run start:dev
-```
+# 1. เปิดทุกระบบพร้อมกัน (Backend + Admin + POS + LIFF + Translator)
+npm run dev:full
 
-### เปิด Frontend แต่ละตัว (Terminal 2-6)
-
-**Admin HQ:**
-```bash
-cd frontend/admin-hq
+# 2. เปิดเฉพาะ Backend + Admin HQ
 npm run dev
-```
 
-**Branch POS:**
-```bash
-cd frontend/branch-pos
-npm run dev
-```
+# 3. แบคอัปฐานข้อมูล PostgreSQL ทั้งหมดทันที
+npm run db:backup
 
-**Buyer LIFF:**
-```bash
-cd frontend/buyer-liff
-npm run dev
-```
+# 4. ทดสอบความถูกต้องของ Backend
+npm run test:api
 
-**Translator:**
-```bash
-cd frontend/translator
-npm run dev
+# 5. คอมไพล์โปรเจกต์ Backend
+npm run build:api
 ```
 
 ---
 
-## 🌐 API Endpoints ตัวอย่าง
+## 🗄️ 4. ข้อมูลฐานข้อมูล (Database)
 
-```
-GET    http://localhost:3000/api/branches
-GET    http://localhost:3000/api/products
-GET    http://localhost:3000/api/orders
-GET    http://localhost:3000/api/menus
-GET    http://localhost:3000/api/users
-```
+* **Engine:** PostgreSQL 16
+* **Database Name:** `cafe`
+* **Local Connection:** `postgresql://cafe:cafepw@localhost:5432/cafe?schema=public`
+* **Backup Location:** โฟลเดอร์ `backups/` (สร้างอัตโนมัติด้วยคำสั่ง `npm run db:backup`)
 
 ---
 
-## 📱 ทดลองบน Mobile
+## 📱 5. แอป Android Payment Forwarder
 
-ทั้งหมดรองรับ responsive design:
-```
-1. กด F12 (Windows) หรือ Cmd+Option+I (Mac)
-2. กด device toggle icon
-3. เลือก iPhone หรือ Android
-```
-
----
-
-## 🗄️ Database Browser
-
-```bash
-cd backend
-npx prisma studio
-```
-ไปที่ **http://localhost:5555**
-
----
-
-## 🔗 อื่นๆ
-
-- **ดูข้อมูลทั้งหมด:** WEB_LINKS.md
-- **ปัญหาการแก้ไข:** ISSUE_RESOLUTION_GUIDE.md
-- **สถาปัตยกรรม:** ARCHITECTURE.md
-- **รายละเอียดการทดสอบ:** TEST_REPORT.md
-
----
-
-**อัปเดต:** 10 เมษายน 2569
-
+* **โฟลเดอร์โปรเจกต์:** `android/payment-forwarder`
+* **หน้าที่:** ดักจับ SMS และ Push Notification จากแอปธนาคาร (SCB, KBank, KTB, BBL, TrueMoney ฯลฯ) แล้วส่งเข้า Backend เพื่อตัดยอดออเดอร์อัตโนมัติ
+* **API Server เริ่มต้น:** `https://api.cafe-coffee.shop` (สามารถระบุหรือเปลี่ยนได้ที่หน้าจอเข้าสู่ระบบของแอป)

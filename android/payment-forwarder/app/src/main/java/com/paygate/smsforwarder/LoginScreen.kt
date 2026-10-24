@@ -31,6 +31,7 @@ fun LoginScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    var apiUrl by remember { mutableStateOf(ApiHelper.getApiUrl(context)) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -121,6 +122,41 @@ fun LoginScreen(
                 Spacer(Modifier.height(16.dp))
             }
             
+            // API Server URL field
+            OutlinedTextField(
+                value = apiUrl,
+                onValueChange = { 
+                    apiUrl = it
+                    errorMessage = null
+                },
+                label = { Text("API Server URL") },
+                placeholder = { Text("https://api.cafe-coffee.shop") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Language,
+                        null,
+                        tint = com.paygate.smsforwarder.ui.theme.NeonCyan
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = com.paygate.smsforwarder.ui.theme.NeonCyan,
+                    unfocusedBorderColor = com.paygate.smsforwarder.ui.theme.InputBorder,
+                    focusedLabelColor = com.paygate.smsforwarder.ui.theme.NeonCyan,
+                    unfocusedLabelColor = com.paygate.smsforwarder.ui.theme.TextSecondary,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = com.paygate.smsforwarder.ui.theme.NeonCyan,
+                    focusedContainerColor = com.paygate.smsforwarder.ui.theme.SurfaceLighter.copy(alpha = 0.3f),
+                    unfocusedContainerColor = com.paygate.smsforwarder.ui.theme.SurfaceLighter.copy(alpha = 0.1f)
+                ),
+                singleLine = true,
+                enabled = !isLoading
+            )
+            
+            Spacer(Modifier.height(16.dp))
+
             // Username field
             OutlinedTextField(
                 value = username,
@@ -203,6 +239,10 @@ fun LoginScreen(
             // Login button
             Button(
                 onClick = {
+                    if (apiUrl.isBlank()) {
+                        errorMessage = "กรุณากรอก API Server URL"
+                        return@Button
+                    }
                     if (username.isBlank() || password.isBlank()) {
                         errorMessage = context.getString(R.string.login_failed)
                         return@Button
@@ -212,6 +252,7 @@ fun LoginScreen(
                         isLoading = true
                         errorMessage = null
                         
+                        ApiHelper.setApiUrl(context, apiUrl.trim())
                         val result = ApiHelper.login(context, username.trim(), password)
                         
                         result.fold(

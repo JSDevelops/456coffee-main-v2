@@ -23,6 +23,8 @@ local.properties
 *.db-journal
 *.sqlite
 *.sqlite3
+*.dump
+backups/
 
 # Uploaded files (user content)
 backend/uploads/
