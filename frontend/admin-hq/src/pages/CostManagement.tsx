@@ -11,6 +11,7 @@ import {
   Package,
   Percent,
   Coins,
+  Download,
 } from 'lucide-react';
 import { api } from '../api';
 import {
@@ -114,13 +115,65 @@ export default function CostManagement() {
   const lowMarginCount = items.filter((i) => i.marginPercentage < MARGIN_THRESHOLDS.ok && i.price > 0).length;
   const noRecipeCount = items.filter((i) => i.recipes.length === 0).length;
 
+  const handleExportCsv = () => {
+    if (!filtered || filtered.length === 0) {
+      toast.error('ไม่มีข้อมูลต้นทุนสำหรับ Export');
+      return;
+    }
+
+    const headers = [
+      'ชื่อสินค้า (Product Name)',
+      'หมวดหมู่ (Category)',
+      'ราคาขาย บาท (Selling Price)',
+      'ต้นทุนวัตถุดิบ COGS บาท (Cost of Goods)',
+      'กำไรขั้นต้น บาท (Gross Profit)',
+      'อัตรากำไร (Margin %)',
+      'สถานะกำไร (Margin Status)',
+      'จำนวนวัตถุดิบในสูตร (Recipe Ingredients Count)',
+    ];
+
+    const rows = filtered.map((i) => {
+      const cat = i.category?.name || '-';
+      const tone = marginTone(i.marginPercentage);
+      return [
+        `"${i.name.replace(/"/g, '""')}"`,
+        `"${cat.replace(/"/g, '""')}"`,
+        i.price.toFixed(2),
+        i.cogs.toFixed(2),
+        i.profit.toFixed(2),
+        `${i.marginPercentage.toFixed(1)}%`,
+        `"${tone.label}"`,
+        i.recipes.length,
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateTag = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.setAttribute('download', `456coffee_cost_analysis_${dateTag}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`ส่งออกข้อมูลต้นทุน ${filtered.length} เมนูเป็น Excel / CSV สำเร็จ`);
+  };
+
   return (
     <>
       <PageHeader
         eyebrow="Cost Analysis"
         title="ต้นทุน & กำไร"
         description="วิเคราะห์ต้นทุนวัตถุดิบและอัตรากำไรของแต่ละเมนู"
-        actions={<Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetch}>รีเฟรช</Button>}
+        actions={
+          <>
+            <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetch}>รีเฟรช</Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export CSV</Button>
+          </>
+        }
       />
 
       {/* Stats strip */}

@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Crown,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import { api } from '../api';
 import {
@@ -153,6 +154,51 @@ export default function CustomersPage() {
     }
   };
 
+  const handleExportCsv = () => {
+    if (!filtered || filtered.length === 0) {
+      toast.error('ไม่มีข้อมูลลูกค้าสำหรับ Export');
+      return;
+    }
+
+    const headers = [
+      'ชื่อลูกค้า (Name)',
+      'เบอร์โทร (Phone)',
+      'อีเมล (Email)',
+      'ช่องทางล็อกอิน (Channels)',
+      'แต้มสะสม (Points)',
+      'จำนวนออเดอร์ (Total Orders)',
+      'วันที่สมัคร (Joined Date)',
+    ];
+
+    const rows = filtered.map((u) => {
+      const providers = u.authProviders.map((p) => p.provider).join(', ') || 'DIRECT';
+      const dateStr = new Date(u.createdAt).toLocaleDateString('th-TH');
+      return [
+        `"${(u.name || '-').replace(/"/g, '""')}"`,
+        `"${u.phone || '-'}"`,
+        `"${u.email || '-'}"`,
+        `"${providers}"`,
+        u.points,
+        u._count.orders,
+        `"${dateStr}"`,
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateTag = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.setAttribute('download', `456coffee_customers_${dateTag}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`ส่งออกข้อมูลลูกค้า ${filtered.length} รายการเป็น Excel / CSV สำเร็จ`);
+  };
+
   return (
     <>
       <PageHeader
@@ -160,7 +206,10 @@ export default function CustomersPage() {
         title="ลูกค้า"
         description={`${filtered.length.toLocaleString()} สมาชิกตรงตามตัวกรอง · ทั้งหมด ${users.length.toLocaleString()}`}
         actions={
-          <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
+          <>
+            <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export CSV</Button>
+          </>
         }
       />
 

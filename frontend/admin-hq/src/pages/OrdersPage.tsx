@@ -220,6 +220,7 @@ export default function OrdersPage() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [exporting, setExporting] = useState(false);
 
   // UI
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -444,65 +445,97 @@ export default function OrdersPage() {
     w.document.close();
   };
 
-  const handleExportCsv = () => {
-    if (!orders || orders.length === 0) {
-      toast.error('ไม่มีข้อมูลออเดอร์สำหรับ Export');
-      return;
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      // Query all matching orders for the current filter criteria (up to 5000 records)
+      const params = new URLSearchParams();
+      if (branchId) params.set('branchId', branchId);
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const date = dateForPreset(datePreset);
+      if (date) params.set('date', date);
+      const dateAfter = dateAfterForPreset(datePreset);
+      if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
+      if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
+      if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
+      if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
+      params.set('sort', sortKey);
+      params.set('page', '1');
+      params.set('limit', '5000');
+
+      let exportList = orders;
+      try {
+        const fullRes = await api.get<OrderListResponse>(`/orders?${params}`);
+        if (fullRes?.data && fullRes.data.length > 0) {
+          exportList = fullRes.data;
+        }
+      } catch {
+        // Fallback to currently loaded orders
+      }
+
+      if (!exportList || exportList.length === 0) {
+        toast.error('ไม่มีข้อมูลออเดอร์สำหรับ Export');
+        return;
+      }
+
+      const headers = [
+        'เลขที่ออเดอร์ (Order No)',
+        'วันเวลา (Date Time)',
+        'สาขา (Branch)',
+        'ลูกค้า (Customer)',
+        'จำนวนชิ้นรวม (Total Items)',
+        'รายการสินค้า (Items Detail)',
+        'ยอดชำระสุทธิ (Total Amount THB)',
+        'วิธีชำระเงิน (Payment Method)',
+        'สถานะการชำระ (Payment Status)',
+        'สถานะออเดอร์ (Order Status)',
+        'ประเภทรับสินค้า (Fulfillment)',
+      ];
+
+      const rows = exportList.map((o) => {
+        const branchName = o.branch?.name || '-';
+        const customer = o.customerName || o.customerUid || '-';
+        const itemsCount = o.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 0;
+        const itemsDetail = (o.items || [])
+          .map((it) => `${it.product?.name || it.productName || 'สินค้า'} x${it.quantity}`)
+          .join('; ');
+        const paymentMethod = o.payment?.method || '-';
+        const paymentStatus = o.payment?.status || '-';
+        const dateStr = new Date(o.createdAt).toLocaleString('th-TH');
+
+        return [
+          `"${o.orderNo}"`,
+          `"${dateStr}"`,
+          `"${branchName.replace(/"/g, '""')}"`,
+          `"${customer.replace(/"/g, '""')}"`,
+          itemsCount,
+          `"${itemsDetail.replace(/"/g, '""')}"`,
+          o.totalAmount.toFixed(2),
+          `"${paymentMethod}"`,
+          `"${paymentStatus}"`,
+          `"${o.status}"`,
+          `"${o.fulfillmentType || '-'}"`,
+        ].join(',');
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const dateTag = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.setAttribute('download', `456coffee_orders_${dateTag}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็น Excel / CSV สำเร็จ`);
+    } catch (e: any) {
+      toast.error(e?.message || 'ส่งออกข้อมูลไม่สำเร็จ');
+    } finally {
+      setExporting(false);
     }
-
-    const headers = [
-      'Order No',
-      'Date/Time',
-      'Branch',
-      'Customer',
-      'Items Count',
-      'Items Detail',
-      'Total Amount (THB)',
-      'Payment Method',
-      'Payment Status',
-      'Order Status',
-      'Fulfillment',
-    ];
-
-    const rows = orders.map((o) => {
-      const branchName = o.branch?.name || '-';
-      const customer = o.customerName || o.customerUid || '-';
-      const itemsCount = o.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 0;
-      const itemsDetail = (o.items || [])
-        .map((it) => `${it.product?.name || it.productName || 'สินค้า'} x${it.quantity}`)
-        .join('; ');
-      const paymentMethod = o.payment?.method || '-';
-      const paymentStatus = o.payment?.status || '-';
-      const dateStr = new Date(o.createdAt).toLocaleString('th-TH');
-
-      return [
-        `"${o.orderNo}"`,
-        `"${dateStr}"`,
-        `"${branchName.replace(/"/g, '""')}"`,
-        `"${customer.replace(/"/g, '""')}"`,
-        itemsCount,
-        `"${itemsDetail.replace(/"/g, '""')}"`,
-        o.totalAmount.toFixed(2),
-        `"${paymentMethod}"`,
-        `"${paymentStatus}"`,
-        `"${o.status}"`,
-        `"${o.fulfillmentType || '-'}"`,
-      ].join(',');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const dateTag = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.setAttribute('download', `456coffee_orders_${dateTag}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`ส่งออก ${orders.length} ออเดอร์เป็นไฟล์ CSV สำเร็จ`);
   };
 
   // ─── Render ────────────────────────────────────────────────────────────
@@ -517,8 +550,8 @@ export default function OrdersPage() {
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
             </Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>
-              Export CSV
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv} loading={exporting}>
+              Export
             </Button>
           </>
         }
