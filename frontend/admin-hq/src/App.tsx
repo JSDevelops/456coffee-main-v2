@@ -58,6 +58,25 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Check URL query/hash for token (supports seamless cross-domain session transfer)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const hashParams = hash.includes('?')
+      ? new URLSearchParams(hash.split('?')[1])
+      : hash.includes('token=')
+      ? new URLSearchParams(hash.replace(/^#\/?/, ''))
+      : null;
+    const token = urlParams.get('token') || hashParams?.get('token');
+    if (token) {
+      auth.setToken(token);
+      setAuthed(true);
+      const cleanUrl = window.location.pathname + '#/orders';
+      window.history.replaceState({}, document.title, cleanUrl);
+      setPageState('orders');
+    }
+  }, []);
+
   const setPage = useCallback((p: Page) => {
     if (window.location.hash !== `#/${p}`) {
       window.location.hash = `/${p}`;
