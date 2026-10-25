@@ -653,6 +653,9 @@ export class OrderService {
       branches,
       newUsersThisMonth,
       newUsersLastMonth,
+      todayCupsAgg,
+      yesterdayCupsAgg,
+      totalCupsAgg,
     ] = await Promise.all([
       this.prisma.order.count(),
       this.prisma.order.count({ where: { createdAt: { gte: startOfToday } } }),
@@ -676,10 +679,25 @@ export class OrderService {
       this.prisma.user.count({
         where: { createdAt: { gte: startOfLastMonth, lt: startOfThisMonth } },
       }),
+      this.prisma.orderItem.aggregate({
+        _sum: { quantity: true },
+        where: { order: { createdAt: { gte: startOfToday } } },
+      }),
+      this.prisma.orderItem.aggregate({
+        _sum: { quantity: true },
+        where: { order: { createdAt: { gte: startOfYesterday, lt: startOfToday } } },
+      }),
+      this.prisma.orderItem.aggregate({
+        _sum: { quantity: true },
+      }),
     ]);
 
     const todayRevenue = todayAgg._sum.totalAmount || 0;
     const yesterdayRevenue = yesterdayAgg._sum.totalAmount || 0;
+    const todayCups = todayCupsAgg._sum.quantity || 0;
+    const yesterdayCups = yesterdayCupsAgg._sum.quantity || 0;
+    const totalCups = totalCupsAgg._sum.quantity || 0;
+    const cupsPerOrder = todayOrders > 0 ? Number((todayCups / todayOrders).toFixed(2)) : 0;
 
     const pct = (curr: number, prev: number) =>
       prev > 0 ? ((curr - prev) / prev) * 100 : curr > 0 ? 100 : 0;
@@ -691,6 +709,10 @@ export class OrderService {
       totalOrders,
       todayOrders,
       ordersDelta: pct(todayOrders, yesterdayOrders),
+      todayCups,
+      totalCups,
+      cupsDelta: pct(todayCups, yesterdayCups),
+      cupsPerOrder,
       customers: uniqueCustomers.length,
       newCustomersThisMonth: newUsersThisMonth,
       customersDelta: pct(newUsersThisMonth, newUsersLastMonth),
@@ -703,8 +725,9 @@ export class OrderService {
     branchId?: string;
     days?: number;
     limit?: number;
+    sortBy?: 'quantity' | 'revenue';
   } = {}) {
-    const { branchId, days = 30, limit = 5 } = opts;
+    const { branchId, days = 30, limit = 5, sortBy = 'quantity' } = opts;
     const since = new Date();
     since.setDate(since.getDate() - days);
 
@@ -715,11 +738,15 @@ export class OrderService {
       },
     };
 
+    const orderBy = sortBy === 'revenue'
+      ? { _sum: { price: 'desc' as const } }
+      : { _sum: { quantity: 'desc' as const } };
+
     const groups = await this.prisma.orderItem.groupBy({
       by: ['productId'],
       where,
       _sum: { quantity: true, price: true },
-      orderBy: { _sum: { quantity: 'desc' } },
+      orderBy,
       take: limit,
     });
 

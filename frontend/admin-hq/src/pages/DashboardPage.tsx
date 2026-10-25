@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -13,10 +13,16 @@ import {
   Receipt,
   Activity,
   ChevronRight,
+  ChevronDown,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Flame,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api';
 import { Card, EmptyState, Skeleton } from '../components/ui';
+import { exportSingleSheetToExcel, exportToCsv } from '../lib/excelExporter';
 
 interface Stats {
   revenue: number;
@@ -25,6 +31,10 @@ interface Stats {
   totalOrders: number;
   todayOrders: number;
   ordersDelta: number;
+  todayCups?: number;
+  totalCups?: number;
+  cupsDelta?: number;
+  cupsPerOrder?: number;
   customers: number;
   newCustomersThisMonth: number;
   customersDelta: number;
@@ -38,6 +48,7 @@ interface TopProduct {
   price: number;
   sold: number;
   revenue: number;
+  percentage?: number;
 }
 
 interface RevenuePoint {
@@ -89,7 +100,7 @@ export default function DashboardPage({ onJumpToOrders, onJumpToProducts }: Dash
     Promise.all([
       api.get<Stats>('/stats/global'),
       api.get<RecentOrder[]>('/orders/recent?limit=8'),
-      api.get<TopProduct[]>('/stats/top-products?days=30&limit=5'),
+      api.get<TopProduct[]>('/stats/top-products?days=30&limit=10&sortBy=quantity'),
       api.get<RevenuePoint[]>('/stats/revenue-trend?days=7'),
     ])
       .then(([s, o, t, r]) => {
@@ -106,8 +117,8 @@ export default function DashboardPage({ onJumpToOrders, onJumpToProducts }: Dash
     <div className="space-y-6">
       <HeroBanner stats={stats} loading={loading} onJumpToOrders={onJumpToOrders} />
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Stat tiles: 5 columns for detailed coffee operations KPI */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <ColorStat
           loading={loading}
           gradient="linear-gradient(135deg, #f97316, #ea580c)"
@@ -130,6 +141,17 @@ export default function DashboardPage({ onJumpToOrders, onJumpToProducts }: Dash
         />
         <ColorStat
           loading={loading}
+          gradient="linear-gradient(135deg, #d97706, #b45309)"
+          tint="rgba(217,119,6,0.10)"
+          icon={<Coffee size={20} />}
+          label="จำนวนแก้ววันนี้"
+          value={`${(stats?.todayCups ?? 0).toLocaleString()} แก้ว`}
+          delta={stats?.cupsDelta}
+          deltaLabel="vs เมื่อวาน"
+          subText={stats?.cupsPerOrder ? `เฉลี่ย ${stats.cupsPerOrder} แก้ว/บิล` : undefined}
+        />
+        <ColorStat
+          loading={loading}
           gradient="linear-gradient(135deg, #a855f7, #7c3aed)"
           tint="rgba(168,85,247,0.10)"
           icon={<Users size={20} />}
@@ -145,6 +167,7 @@ export default function DashboardPage({ onJumpToOrders, onJumpToProducts }: Dash
           icon={<Store size={20} />}
           label="สาขาในระบบ"
           value={(stats?.branches ?? 0).toString()}
+          subText={stats?.totalCups ? `สะสม ${stats.totalCups.toLocaleString()} แก้ว` : undefined}
         />
       </div>
 
@@ -158,7 +181,7 @@ export default function DashboardPage({ onJumpToOrders, onJumpToProducts }: Dash
           delta={stats?.revenueDelta ?? 0}
         />
         <TopProductsCard
-          products={topProducts}
+          initialProducts={topProducts}
           loading={loading}
           onSeeAll={onJumpToProducts}
         />
@@ -346,6 +369,7 @@ function ColorStat({
   value,
   delta,
   deltaLabel,
+  subText,
 }: {
   loading?: boolean;
   gradient: string;
@@ -355,6 +379,7 @@ function ColorStat({
   value: string;
   delta?: number;
   deltaLabel?: string;
+  subText?: string;
 }) {
   return (
     <motion.div
@@ -410,10 +435,11 @@ function ColorStat({
           {value}
         </h3>
       )}
-      {deltaLabel && (
-        <p className="relative text-[11px] mt-1.5" style={{ color: 'var(--text-faint)' }}>
-          {deltaLabel}
-        </p>
+      {(deltaLabel || subText) && (
+        <div className="relative flex items-center justify-between gap-2 text-[11px] mt-1.5" style={{ color: 'var(--text-faint)' }}>
+          <span>{deltaLabel}</span>
+          {subText && <span className="font-semibold text-[11px]" style={{ color: 'var(--accent)' }}>{subText}</span>}
+        </div>
       )}
     </motion.div>
   );
@@ -547,72 +573,290 @@ function BarChart({ data, max }: { data: RevenuePoint[]; max: number }) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Top products with progress bars
+// Top products with dual sorting (cups/revenue), time range & Excel/CSV export
 // ────────────────────────────────────────────────────────────────────────────
 
 function TopProductsCard({
-  products,
-  loading,
+  initialProducts,
+  loading: initialLoading,
   onSeeAll,
 }: {
-  products: TopProduct[];
+  initialProducts: TopProduct[];
   loading: boolean;
   onSeeAll: () => void;
 }) {
-  const max = useMemo(() => Math.max(...products.map((p) => p.sold), 1), [products]);
+  const [products, setProducts] = useState<TopProduct[]>(initialProducts);
+  const [sortBy, setSortBy] = useState<'quantity' | 'revenue'>('quantity');
+  const [days, setDays] = useState<7 | 30 | 90>(30);
+  const [fetching, setFetching] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sync initialProducts if provided
+  useEffect(() => {
+    if (initialProducts && initialProducts.length > 0 && products.length === 0) {
+      setProducts(initialProducts);
+    }
+  }, [initialProducts]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch updated data when filters change
+  const fetchTopProducts = async (newSort: 'quantity' | 'revenue', newDays: 7 | 30 | 90) => {
+    setFetching(true);
+    try {
+      const res = await api.get<TopProduct[]>(`/stats/top-products?days=${newDays}&limit=10&sortBy=${newSort}`);
+      setProducts(res);
+    } catch (err) {
+      console.error('Failed to fetch top products:', err);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleSortChange = (newSort: 'quantity' | 'revenue') => {
+    setSortBy(newSort);
+    fetchTopProducts(newSort, days);
+  };
+
+  const handleDaysChange = (newDays: 7 | 30 | 90) => {
+    setDays(newDays);
+    fetchTopProducts(sortBy, newDays);
+  };
+
+  // Max value for progress bar comparison
+  const max = useMemo(() => {
+    if (products.length === 0) return 1;
+    return Math.max(...products.map((p) => (sortBy === 'quantity' ? p.sold : p.revenue)), 1);
+  }, [products, sortBy]);
+
+  // Total value for percentage calculation
+  const totalVal = useMemo(() => {
+    return products.reduce((acc, p) => acc + (sortBy === 'quantity' ? p.sold : p.revenue), 0);
+  }, [products, sortBy]);
+
+  // Export handlers
+  const handleExport = (format: 'xlsx' | 'csv') => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `456coffee-top-products-${days}d-${sortBy}-${timestamp}`;
+    const rows = products.map((p, idx) => ({
+      อันดับ: idx + 1,
+      ชื่อสินค้า: p.name,
+      'ราคาขาย (บาท)': p.price,
+      'จำนวนที่ขายได้ (แก้ว)': p.sold,
+      'ยอดขายรวม (บาท)': p.revenue,
+      'สัดส่วน (%)': totalVal > 0
+        ? `${(((sortBy === 'quantity' ? p.sold : p.revenue) / totalVal) * 100).toFixed(1)}%`
+        : '0%',
+    }));
+
+    if (format === 'xlsx') {
+      exportSingleSheetToExcel(rows, `สินค้าขายดี (${days}วัน)`, filename);
+    } else {
+      exportToCsv(rows, filename);
+    }
+    setExportOpen(false);
+  };
+
+  const loading = initialLoading || fetching;
 
   return (
     <Card padded>
-      <div className="flex items-center justify-between mb-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
           >
-            <Coffee size={18} />
+            <Flame size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-base" style={{ color: 'var(--text)' }}>
+            <h3 className="font-bold text-base flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
               สินค้าขายดี
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                {sortBy === 'quantity' ? 'ตามจำนวนแก้ว' : 'ตามยอดขาย'}
+              </span>
             </h3>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              30 วันล่าสุด
+              10 อันดับยอดนิยม · {days} วันล่าสุด
             </p>
           </div>
         </div>
-        <button
-          onClick={onSeeAll}
-          className="inline-flex items-center gap-1 text-xs font-semibold transition-all hover:gap-2"
-          style={{ color: 'var(--accent)' }}
-        >
-          ดู <ChevronRight size={14} />
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* Export Dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setExportOpen(!exportOpen)}
+              disabled={loading || products.length === 0}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+              style={{
+                background: 'var(--surface-2)',
+                color: 'var(--text-2)',
+                border: '1px solid var(--border)',
+              }}
+              title="ส่งออกรายงานสินค้าขายดี"
+            >
+              <Download size={13} />
+              <span className="hidden sm:inline">ส่งออก</span>
+              <ChevronDown size={12} className={`transition-transform duration-200 ${exportOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {exportOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl shadow-xl overflow-hidden z-30"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <button
+                    onClick={() => handleExport('xlsx')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium text-left transition-colors hover:bg-emerald-500/10 cursor-pointer"
+                    style={{ color: 'var(--text)' }}
+                  >
+                    <FileSpreadsheet size={15} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="font-semibold">ส่งออก Excel (.xlsx)</p>
+                      <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>เปิดด้วย MS Excel ได้ทันที</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium text-left transition-colors hover:bg-blue-500/10 border-t cursor-pointer"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                  >
+                    <FileText size={15} className="text-blue-500 shrink-0" />
+                    <div>
+                      <p className="font-semibold">ส่งออก CSV (.csv)</p>
+                      <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>รองรับ UTF-8 ภาษาไทยสมบูรณ์</p>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            onClick={onSeeAll}
+            className="inline-flex items-center gap-0.5 text-xs font-semibold transition-all hover:gap-1.5 cursor-pointer"
+            style={{ color: 'var(--accent)' }}
+          >
+            ดู <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
 
+      {/* Control Pills: Metric switcher + Time range switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 p-1.5 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+        {/* Metric Segment */}
+        <div className="inline-flex items-center p-0.5 rounded-lg" style={{ background: 'var(--surface)' }}>
+          <button
+            type="button"
+            onClick={() => handleSortChange('quantity')}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer"
+            style={{
+              background: sortBy === 'quantity' ? 'var(--accent)' : 'transparent',
+              color: sortBy === 'quantity' ? 'var(--accent-fg)' : 'var(--text-muted)',
+              boxShadow: sortBy === 'quantity' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            <Coffee size={12} />
+            <span>จำนวนแก้ว</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSortChange('revenue')}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer"
+            style={{
+              background: sortBy === 'revenue' ? 'var(--accent)' : 'transparent',
+              color: sortBy === 'revenue' ? 'var(--accent-fg)' : 'var(--text-muted)',
+              boxShadow: sortBy === 'revenue' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            <span>ยอดขาย ฿</span>
+          </button>
+        </div>
+
+        {/* Days Segment */}
+        <div className="inline-flex items-center gap-1">
+          {([7, 30, 90] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => handleDaysChange(d)}
+              className="px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer"
+              style={{
+                background: days === d ? 'var(--surface)' : 'transparent',
+                color: days === d ? 'var(--text)' : 'var(--text-faint)',
+                boxShadow: days === d ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+              }}
+            >
+              {d} วัน
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* List content */}
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-14 w-full" />
           ))}
         </div>
       ) : products.length === 0 ? (
-        <EmptyState icon={<Coffee size={24} />} title="ยังไม่มีข้อมูลขาย" />
+        <EmptyState icon={<Coffee size={24} />} title="ยังไม่มีข้อมูลขายในช่วงเวลานี้" />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {products.map((p, idx) => {
-            const ratio = max > 0 ? (p.sold / max) * 100 : 0;
+            const currentVal = sortBy === 'quantity' ? p.sold : p.revenue;
+            const ratio = max > 0 ? (currentVal / max) * 100 : 0;
+            const sharePercent = totalVal > 0 ? ((currentVal / totalVal) * 100).toFixed(1) : '0';
+
+            // Rank styling with special medals for top 3
+            const isRank1 = idx === 0;
+            const isRank2 = idx === 1;
+            const isRank3 = idx === 2;
+
+            const badgeBg = isRank1
+              ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+              : isRank2
+                ? 'linear-gradient(135deg, #94a3b8, #64748b)'
+                : isRank3
+                  ? 'linear-gradient(135deg, #b45309, #78350f)'
+                  : 'var(--surface-3)';
+
+            const badgeColor = isRank1 || isRank2 || isRank3 ? '#ffffff' : 'var(--text-2)';
+
             return (
               <motion.div
                 key={p.productId}
-                initial={{ opacity: 0, x: -8 }}
+                initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.04 }}
+                transition={{ delay: idx * 0.03 }}
+                className="group p-2 -mx-2 rounded-xl transition-colors hover:bg-neutral-500/5"
               >
                 <div className="flex items-center gap-3 mb-1.5">
                   <div className="relative shrink-0">
                     <div
-                      className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center"
-                      style={{ background: 'var(--surface-2)' }}
+                      className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
                     >
                       {p.imageUrl ? (
                         <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
@@ -621,36 +865,49 @@ function TopProductsCard({
                       )}
                     </div>
                     <span
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
-                      style={{
-                        background: idx === 0 ? 'var(--accent)' : 'var(--surface-3)',
-                        color: idx === 0 ? 'var(--accent-fg)' : 'var(--text-2)',
-                      }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shadow-sm"
+                      style={{ background: badgeBg, color: badgeColor }}
                     >
                       {idx + 1}
                     </span>
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate" style={{ color: 'var(--text)' }}>
-                      {p.name}
-                    </p>
-                    <p className="text-xs num" style={{ color: 'var(--text-muted)' }}>
-                      {p.sold.toLocaleString()} แก้ว · ฿{p.revenue.toLocaleString()}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-sm truncate" style={{ color: 'var(--text)' }}>
+                        {p.name}
+                      </p>
+                      <span className="text-[11px] font-bold shrink-0 num" style={{ color: 'var(--accent)' }}>
+                        {sortBy === 'quantity' ? `${p.sold.toLocaleString()} แก้ว` : `฿${p.revenue.toLocaleString()}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      <p className="num text-[11px]">
+                        ฿{p.price.toLocaleString()} / แก้ว · {sortBy === 'quantity' ? `ยอด ฿${p.revenue.toLocaleString()}` : `${p.sold.toLocaleString()} แก้ว`}
+                      </p>
+                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-full num" style={{ background: 'var(--surface-2)', color: 'var(--text-faint)' }}>
+                        {sharePercent}%
+                      </span>
+                    </div>
                   </div>
                 </div>
-                {/* Progress bar */}
-                <div className="ml-13 sm:ml-13 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+
+                {/* Progress bar with percentage gradient */}
+                <div className="ml-13 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${ratio}%` }}
-                    transition={{ duration: 0.6, delay: idx * 0.04 + 0.1, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.5, delay: idx * 0.03 + 0.05, ease: [0.22, 1, 0.36, 1] }}
                     className="h-full rounded-full"
                     style={{
-                      background:
-                        idx === 0
-                          ? 'linear-gradient(90deg, #f97316, #ea580c)'
-                          : 'var(--accent)',
+                      background: isRank1
+                        ? 'linear-gradient(90deg, #f59e0b, #ea580c)'
+                        : isRank2
+                          ? 'linear-gradient(90deg, #06b6d4, #0891b2)'
+                          : isRank3
+                            ? 'linear-gradient(90deg, #a855f7, #7c3aed)'
+                            : 'var(--accent)',
                     }}
                   />
                 </div>

@@ -160,11 +160,13 @@ export class OrderController {
     @Query('branchId') branchId?: string,
     @Query('days') days?: string,
     @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: 'quantity' | 'revenue',
   ) {
     return this.orderService.getTopProducts({
       branchId,
       days: days ? parseInt(days) : undefined,
       limit: limit ? parseInt(limit) : undefined,
+      sortBy: sortBy === 'revenue' ? 'revenue' : 'quantity',
     });
   }
 
