@@ -10,7 +10,9 @@ if [ -f "$ENV_FILE" ]; then
   export $(grep -v '^#' "$ENV_FILE" | grep 'DATABASE_URL' | xargs)
 fi
 
-DB_URL="${DATABASE_URL:-postgresql://cafe:cafepw@localhost:5432/cafe?schema=public}"
+RAW_DB_URL="${DATABASE_URL:-postgresql://cafe:cafepw@localhost:5432/cafe?schema=public}"
+# Strip Prisma ?schema= parameter which pg_dump rejects
+CLEAN_DB_URL="${RAW_DB_URL%%\?*}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 mkdir -p "$BACKUP_DIR"
 
@@ -30,8 +32,11 @@ if [ -z "$PG_DUMP_BIN" ]; then
   exit 1
 fi
 
-"$PG_DUMP_BIN" "$DB_URL" -F p -f "$SQL_FILE"
-"$PG_DUMP_BIN" "$DB_URL" -F c -f "$DUMP_FILE"
+"$PG_DUMP_BIN" "$CLEAN_DB_URL" -F p -f "$SQL_FILE"
+"$PG_DUMP_BIN" "$CLEAN_DB_URL" -F c -f "$DUMP_FILE"
+
+# Prune backups older than 30 days to save disk space
+find "$BACKUP_DIR" -type f \( -name "*.sql" -o -name "*.dump" \) -mtime +30 -delete 2>/dev/null || true
 
 echo "✅ Backup completed successfully!"
 echo "   - SQL:  $SQL_FILE"

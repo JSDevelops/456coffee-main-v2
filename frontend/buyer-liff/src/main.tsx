@@ -18,7 +18,11 @@ bootstrapSettings();
 // Kick off menu data + image warmup before React even mounts. The fetch races
 // in parallel with the JS chunk parse and is usually done by the time any
 // page mounts.
-const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
+const defaultApi = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? 'https://api.cafe-coffee.shop'
+  : 'http://localhost:5001';
+
+const API = `${import.meta.env.VITE_API_URL || defaultApi}/api`;
 fetch(`${API}/menu`)
   .then((r) => r.ok ? r.json() : null)
   .then((data) => {
@@ -37,7 +41,7 @@ fetch(`${API}/categories`)
   .then((data) => { if (Array.isArray(data)) setCached(`${API}/categories`, data); })
   .catch(() => {});
 
-const settingsSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001');
+const settingsSocket = io(import.meta.env.VITE_API_URL || defaultApi);
 settingsSocket.on('settings-updated', (settings: Record<string, string>) => {
   applySettings(settings);
   setCached(`${API}/settings`, settings);

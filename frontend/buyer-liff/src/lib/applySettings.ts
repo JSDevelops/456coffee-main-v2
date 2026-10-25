@@ -4,7 +4,11 @@
 
 import { cachedFetch, getCached } from './cache';
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
+const defaultApi = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? 'https://api.cafe-coffee.shop'
+  : 'http://localhost:5001';
+
+const API_BASE = `${import.meta.env.VITE_API_URL || defaultApi}/api`;
 const SETTINGS_KEY = `${API_BASE}/settings`;
 
 const SARABUN_STACK = `'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif`;

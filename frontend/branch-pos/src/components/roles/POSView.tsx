@@ -32,8 +32,8 @@ import {
   Gift,
 } from 'lucide-react';
 import { PaginationControls, useClientPagination } from '../Pagination';
+import { API_BASE, SOCKET_URL } from '../../api';
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
 const CUSTOMER_DISPLAY_CHANNEL_PREFIX = 'pos.customerDisplay';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -3012,7 +3012,7 @@ function PromoSection({
   onApply: (promo: { id: string; name: string; discountAmount: number }) => void;
   onRemove: () => void;
 }) {
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  const API_URL = SOCKET_URL;
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
