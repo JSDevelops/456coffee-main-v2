@@ -55,10 +55,34 @@ async function bootstrap() {
   app.useStaticAssets(uploadsDir, { prefix: '/uploads/' });
 
   // Restrict CORS in production via env. Defaults to permissive for dev.
-  const corsOrigin = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
-    : true;
-  app.enableCors({ origin: corsOrigin, credentials: true });
+  const rawOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const defaultAllowedOrigins = [
+    'https://465coffee.vercel.app',
+    'https://465coffee-nine.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+  ];
+
+  const allowedOrigins = Array.from(new Set([...rawOrigins, ...defaultAllowedOrigins]));
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/465coffee.*\.vercel\.app$/.test(origin);
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
+    credentials: true,
+  });
 
   // Standard HTTP security headers (CSP off by default since we don't yet
   // enumerate inline scripts/styles; turn it on once frontend assets are stable).

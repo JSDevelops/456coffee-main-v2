@@ -10,13 +10,30 @@ import { JwtService } from '@nestjs/jwt';
 import { Logger } from '@nestjs/common';
 import type { JwtPayload } from './auth/jwt-payload';
 
-const socketCorsOrigin = process.env.CORS_ORIGIN
+const configuredOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
-  : true;
+  : [];
+
+const allowedSocketOrigins = Array.from(
+  new Set([
+    ...configuredOrigins,
+    'https://465coffee.vercel.app',
+    'https://465coffee-nine.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+  ]),
+);
 
 @WebSocketGateway({
   cors: {
-    origin: socketCorsOrigin,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) return callback(null, true);
+      const isAllowed =
+        allowedSocketOrigins.includes(origin) ||
+        /^https:\/\/465coffee.*\.vercel\.app$/.test(origin);
+      callback(null, isAllowed);
+    },
     credentials: true,
   },
 })
