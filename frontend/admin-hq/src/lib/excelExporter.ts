@@ -12,6 +12,33 @@ export interface ExcelExportOptions {
 }
 
 /**
+ * Robust cross-browser file download trigger using Blob and ObjectURL
+ */
+function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.style.display = 'none';
+  link.href = url;
+  link.setAttribute('download', filename);
+  link.download = filename;
+
+  document.body.appendChild(link);
+  link.click();
+
+  // Delay revoking ObjectURL to ensure browser download manager has completed fetching the blob
+  setTimeout(() => {
+    try {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
+  }, 2000);
+}
+
+/**
  * Calculates auto column widths based on maximum string length in each column
  */
 function autoFitColumns(data: Record<string, any>[]) {
@@ -67,7 +94,12 @@ export function exportToExcel({ filename, sheets }: ExcelExportOptions): void {
     ? filename
     : `${filename}_${timestamp}.xlsx`;
 
-  XLSX.writeFile(workbook, fullFilename, { compression: true });
+  // Generate binary ArrayBuffer and download as genuine .xlsx Blob
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  triggerDownload(blob, fullFilename);
 }
 
 /**
@@ -108,15 +140,8 @@ export function exportToCsv(
 
   const csvContent = '\uFEFF' + csvRows.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().slice(0, 10);
   const fullFilename = filename.endsWith('.csv') ? filename : `${filename}_${timestamp}.csv`;
 
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', fullFilename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  triggerDownload(blob, fullFilename);
 }
