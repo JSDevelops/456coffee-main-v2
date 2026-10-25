@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag,
@@ -22,6 +22,9 @@ import {
   RefreshCw,
   Download,
   ChevronRight,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
   Wallet,
   Printer,
 } from 'lucide-react';
@@ -36,7 +39,7 @@ import {
   useToast,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
-import { exportToExcel } from '../lib/excelExporter';
+import { exportToExcel, exportToCsv } from '../lib/excelExporter';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -446,8 +449,22 @@ export default function OrdersPage() {
     w.document.close();
   };
 
-  const handleExportCsv = async () => {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleExport = async (format: 'xlsx' | 'csv' = 'xlsx') => {
     setExporting(true);
+    setShowExportMenu(false);
     try {
       // Query all matching orders for the current filter criteria (up to 5000 records)
       const params = new URLSearchParams();
@@ -479,7 +496,7 @@ export default function OrdersPage() {
         return;
       }
 
-      // Sheet 1: Detailed Orders
+      // Detailed Orders
       const orderRows = exportList.map((o) => {
         const branchName = o.branch?.name || '-';
         const customer = o.customerName || o.customerUid || '-';
@@ -506,31 +523,36 @@ export default function OrdersPage() {
         };
       });
 
-      // Sheet 2: Summary by Branch
-      const branchSummaryMap = new Map<string, { count: number; total: number }>();
-      for (const o of exportList) {
-        const bName = o.branch?.name || 'ไม่ระบุสาขา';
-        const curr = branchSummaryMap.get(bName) || { count: 0, total: 0 };
-        curr.count += 1;
-        curr.total += o.totalAmount;
-        branchSummaryMap.set(bName, curr);
+      if (format === 'csv') {
+        exportToCsv('456coffee_orders', orderRows);
+        toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็นไฟล์ CSV (.csv) สำเร็จ`);
+      } else {
+        // Summary by Branch for Sheet 2
+        const branchSummaryMap = new Map<string, { count: number; total: number }>();
+        for (const o of exportList) {
+          const bName = o.branch?.name || 'ไม่ระบุสาขา';
+          const curr = branchSummaryMap.get(bName) || { count: 0, total: 0 };
+          curr.count += 1;
+          curr.total += o.totalAmount;
+          branchSummaryMap.set(bName, curr);
+        }
+        const summaryRows = Array.from(branchSummaryMap.entries()).map(([branch, stat]) => ({
+          'สาขา': branch,
+          'จำนวนออเดอร์': stat.count,
+          'ยอดขายรวม (บาท)': Number(stat.total.toFixed(2)),
+          'ยอดเฉลี่ยต่อบิล (บาท)': Number((stat.total / (stat.count || 1)).toFixed(2)),
+        }));
+
+        exportToExcel({
+          filename: '456coffee_orders',
+          sheets: [
+            { sheetName: 'รายการออเดอร์', data: orderRows },
+            { sheetName: 'สรุปยอดขายตามสาขา', data: summaryRows },
+          ],
+        });
+
+        toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็นไฟล์ Excel (.xlsx) สำเร็จ`);
       }
-      const summaryRows = Array.from(branchSummaryMap.entries()).map(([branch, stat]) => ({
-        'สาขา': branch,
-        'จำนวนออเดอร์': stat.count,
-        'ยอดขายรวม (บาท)': Number(stat.total.toFixed(2)),
-        'ยอดเฉลี่ยต่อบิล (บาท)': Number((stat.total / (stat.count || 1)).toFixed(2)),
-      }));
-
-      exportToExcel({
-        filename: '456coffee_orders',
-        sheets: [
-          { sheetName: 'รายการออเดอร์', data: orderRows },
-          { sheetName: 'สรุปยอดขายตามสาขา', data: summaryRows },
-        ],
-      });
-
-      toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็นไฟล์ Excel (.xlsx) สำเร็จ`);
     } catch (e: any) {
       toast.error(e?.message || 'ส่งออกข้อมูลไม่สำเร็จ');
     } finally {
@@ -550,9 +572,74 @@ export default function OrdersPage() {
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
             </Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv} loading={exporting}>
-              Export Excel
-            </Button>
+            <div className="relative inline-block text-left" ref={exportMenuRef}>
+              <div className="inline-flex rounded-xl shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => handleExport('xlsx')}
+                  disabled={exporting}
+                  className="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-l-xl text-xs font-bold text-[#107c41] bg-[#107c41]/10 hover:bg-[#107c41]/20 transition-all border border-r-0 border-[#107c41]/20 disabled:opacity-50 cursor-pointer"
+                  title="ส่งออกไฟล์ Excel (.xlsx) ทันที"
+                >
+                  <Download size={14} />
+                  <span>{exporting ? 'กำลังส่งออก...' : 'Export Excel'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  disabled={exporting}
+                  className="inline-flex items-center px-2 h-9 rounded-r-xl text-xs font-bold text-[#107c41] bg-[#107c41]/10 hover:bg-[#107c41]/20 transition-all border border-[#107c41]/20 disabled:opacity-50 cursor-pointer"
+                  title="เลือกรูปแบบการส่งออก (Excel หรือ CSV)"
+                >
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${showExportMenu ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+
+              {showExportMenu && (
+                <div
+                  className="absolute right-0 mt-2 w-60 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  style={{
+                    background: 'var(--card-bg, #ffffff)',
+                    border: '1px solid var(--border-color, #ece5da)',
+                    boxShadow: '0 12px 36px rgba(0,0,0,0.16)'
+                  }}
+                >
+                  <div className="px-3 py-1.5 text-[11px] font-bold text-[#7c543c]/70 uppercase tracking-wider">
+                    เลือกรูปแบบไฟล์ Export
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleExport('xlsx')}
+                    className="w-full flex items-start gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#fdfaf6] transition-colors group cursor-pointer"
+                  >
+                    <span className="p-1.5 rounded-lg bg-[#107c41]/10 text-[#107c41] group-hover:scale-105 transition-transform mt-0.5">
+                      <FileSpreadsheet size={15} />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-[#2d241e] flex items-center gap-1.5">
+                        Excel Workbook (.xlsx)
+                        <span className="text-[10px] px-1 rounded bg-[#107c41]/10 text-[#107c41] font-semibold">แนะนำ</span>
+                      </div>
+                      <div className="text-[11px] text-[#7c543c]/60 mt-0.5">2 แผ่นงาน (ออเดอร์ + สรุปยอดขาย)</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExport('csv')}
+                    className="w-full flex items-start gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#fdfaf6] transition-colors group cursor-pointer mt-0.5"
+                  >
+                    <span className="p-1.5 rounded-lg bg-[#0284c7]/10 text-[#0284c7] group-hover:scale-105 transition-transform mt-0.5">
+                      <FileText size={15} />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-[#2d241e]">CSV File (.csv)</div>
+                      <div className="text-[11px] text-[#7c543c]/60 mt-0.5">UTF-8 BOM รองรับภาษาไทย 100%</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         }
       />

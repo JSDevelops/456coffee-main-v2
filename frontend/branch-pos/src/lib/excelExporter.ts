@@ -73,3 +73,39 @@ export function exportSingleSheetToExcel(
     sheets: [{ sheetName, data, headers }],
   });
 }
+
+/**
+ * Exports data into a standard CSV (.csv) file with UTF-8 BOM so Thai text displays correctly in Excel
+ */
+export function exportToCsv(
+  filename: string,
+  data: Record<string, any>[],
+): void {
+  if (!data || data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const csvRows = [
+    headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(','),
+  ];
+
+  for (const row of data) {
+    const values = headers.map((h) => {
+      const val = row[h] !== null && row[h] !== undefined ? String(row[h]) : '';
+      return `"${val.replace(/"/g, '""')}"`;
+    });
+    csvRows.push(values.join(','));
+  }
+
+  const csvContent = '\uFEFF' + csvRows.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const fullFilename = filename.endsWith('.csv') ? filename : `${filename}_${timestamp}.csv`;
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', fullFilename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
