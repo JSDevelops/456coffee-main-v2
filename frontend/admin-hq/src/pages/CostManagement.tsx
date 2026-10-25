@@ -24,6 +24,7 @@ import {
   useToast,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
+import { exportSingleSheetToExcel } from '../lib/excelExporter';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
 
 interface Recipe {
@@ -121,45 +122,28 @@ export default function CostManagement() {
       return;
     }
 
-    const headers = [
-      'ชื่อสินค้า (Product Name)',
-      'หมวดหมู่ (Category)',
-      'ราคาขาย บาท (Selling Price)',
-      'ต้นทุนวัตถุดิบ COGS บาท (Cost of Goods)',
-      'กำไรขั้นต้น บาท (Gross Profit)',
-      'อัตรากำไร (Margin %)',
-      'สถานะกำไร (Margin Status)',
-      'จำนวนวัตถุดิบในสูตร (Recipe Ingredients Count)',
-    ];
-
     const rows = filtered.map((i) => {
       const cat = i.category?.name || '-';
       const tone = marginTone(i.marginPercentage);
-      return [
-        `"${i.name.replace(/"/g, '""')}"`,
-        `"${cat.replace(/"/g, '""')}"`,
-        i.price.toFixed(2),
-        i.cogs.toFixed(2),
-        i.profit.toFixed(2),
-        `${i.marginPercentage.toFixed(1)}%`,
-        `"${tone.label}"`,
-        i.recipes.length,
-      ].join(',');
+      return {
+        'ชื่อสินค้า': i.name,
+        'หมวดหมู่': cat,
+        'ราคาขาย (บาท)': i.price,
+        'ต้นทุน COGS (บาท)': i.cogs,
+        'กำไรขั้นต้น (บาท)': i.profit,
+        'อัตรากำไร %': Number(i.marginPercentage.toFixed(1)),
+        'สถานะกำไร': tone.label,
+        'จำนวนวัตถุดิบในสูตร': i.recipes.length,
+      };
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const dateTag = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.setAttribute('download', `456coffee_cost_analysis_${dateTag}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportSingleSheetToExcel(
+      '456coffee_cost_analysis',
+      'วิเคราะห์ต้นทุนและกำไร',
+      rows,
+    );
 
-    toast.success(`ส่งออกข้อมูลต้นทุน ${filtered.length} เมนูเป็น Excel / CSV สำเร็จ`);
+    toast.success(`ส่งออกข้อมูลต้นทุน ${filtered.length} เมนูเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
   };
 
   return (
@@ -171,7 +155,7 @@ export default function CostManagement() {
         actions={
           <>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetch}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export CSV</Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export Excel</Button>
           </>
         }
       />

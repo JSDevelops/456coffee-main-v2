@@ -13,6 +13,7 @@ import {
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
+import { exportToExcel } from '../lib/excelExporter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Branch { id: string; name: string }
@@ -146,71 +147,55 @@ export default function InventoryLedger() {
   ];
 
   const handleExportCsv = () => {
-    if (tab === 'history') {
-      if (!filteredTxs || filteredTxs.length === 0) {
-        toast.error('ไม่มีประวัติการทำรายการสำหรับ Export');
-        return;
-      }
-      const headers = ['วันเวลา (Date)', 'ประเภทรายการ (Type)', 'วัตถุดิบ (Ingredient)', 'จำนวน (Quantity)', 'หน่วย (Unit)', 'ต้นทุน/หน่วย (Unit Cost)', 'มูลค่ารวม (Total Cost)', 'หมายเหตุ (Note)'];
-      const rows = filteredTxs.map((t) => {
-        const typeLabel = TYPE_CFG[t.type]?.label || t.type;
-        const dateStr = new Date(t.createdAt).toLocaleString('th-TH');
-        return [
-          `"${dateStr}"`,
-          `"${typeLabel}"`,
-          `"${(t.ingredient?.name || '-').replace(/"/g, '""')}"`,
-          t.quantity,
-          `"${t.ingredient?.unit || ''}"`,
-          t.unitCost.toFixed(2),
-          t.totalCost.toFixed(2),
-          `"${(t.note || '').replace(/"/g, '""')}"`,
-        ].join(',');
-      });
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const dateTag = new Date().toISOString().slice(0, 10);
-      link.href = url;
-      link.setAttribute('download', `456coffee_inventory_history_${dateTag}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success(`ส่งออกประวัติสต็อก ${filteredTxs.length} รายการเป็น CSV สำเร็จ`);
-    } else {
-      if (!filteredStock || filteredStock.length === 0) {
-        toast.error('ไม่มีข้อมูลสต็อกคงเหลือสำหรับ Export');
-        return;
-      }
-      const headers = ['ชื่อวัตถุดิบ (Ingredient)', 'SKU', 'คงเหลือ (Quantity)', 'หน่วย (Unit)', 'ต้นทุน/หน่วย (Cost per Unit)', 'มูลค่ารวมสต็อก (Total Value)', 'จุดสั่งซื้อขั้นต่ำ (Threshold)', 'สถานะ (Status)'];
-      const rows = filteredStock.map((s) => {
-        const totalVal = s.quantity * (s.ingredient.costPerUnit || 0);
-        const statusLabel = s.quantity <= 0 ? 'หมดสต็อก' : s.quantity <= s.lowStockThreshold ? 'สต็อกต่ำ' : 'ปกติ';
-        return [
-          `"${s.ingredient.name.replace(/"/g, '""')}"`,
-          `"${s.ingredient.sku || '-'}"`,
-          s.quantity,
-          `"${s.ingredient.unit}"`,
-          s.ingredient.costPerUnit.toFixed(2),
-          totalVal.toFixed(2),
-          s.lowStockThreshold,
-          `"${statusLabel}"`,
-        ].join(',');
-      });
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const dateTag = new Date().toISOString().slice(0, 10);
-      link.href = url;
-      link.setAttribute('download', `456coffee_inventory_stock_${dateTag}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success(`ส่งออกสต็อกวัตถุดิบ ${filteredStock.length} รายการเป็น CSV สำเร็จ`);
+    const stockRows = (filteredStock || []).map((s) => {
+      const totalVal = s.quantity * (s.ingredient.costPerUnit || 0);
+      const statusLabel = s.quantity <= 0 ? 'หมดสต็อก' : s.quantity <= s.lowStockThreshold ? 'สต็อกต่ำ' : 'ปกติ';
+      return {
+        'ชื่อวัตถุดิบ': s.ingredient.name,
+        'SKU': s.ingredient.sku || '-',
+        'คงเหลือ': s.quantity,
+        'หน่วย': s.ingredient.unit,
+        'ต้นทุน/หน่วย (บาท)': s.ingredient.costPerUnit,
+        'มูลค่ารวมสต็อก (บาท)': Number(totalVal.toFixed(2)),
+        'จุดสั่งซื้อขั้นต่ำ': s.lowStockThreshold,
+        'สถานะสต็อก': statusLabel,
+      };
+    });
+
+    const txRows = (filteredTxs || []).map((t) => {
+      const typeLabel = TYPE_CFG[t.type]?.label || t.type;
+      const dateStr = new Date(t.createdAt).toLocaleString('th-TH');
+      return {
+        'วันเวลา': dateStr,
+        'ประเภทรายการ': typeLabel,
+        'วัตถุดิบ': t.ingredient?.name || '-',
+        'จำนวน': t.quantity,
+        'หน่วย': t.ingredient?.unit || '',
+        'ต้นทุน/หน่วย (บาท)': t.unitCost,
+        'มูลค่ารวม (บาท)': t.totalCost,
+        'หมายเหตุ': t.note || '-',
+      };
+    });
+
+    if (stockRows.length === 0 && txRows.length === 0) {
+      toast.error('ไม่มีข้อมูลสต็อกหรือประวัติสำหรับ Export');
+      return;
     }
+
+    const sheets = [];
+    if (stockRows.length > 0) {
+      sheets.push({ sheetName: 'สต็อกคงเหลือ', data: stockRows });
+    }
+    if (txRows.length > 0) {
+      sheets.push({ sheetName: 'ประวัติการรับ-เบิก', data: txRows });
+    }
+
+    exportToExcel({
+      filename: '456coffee_inventory',
+      sheets,
+    });
+
+    toast.success('ส่งออกข้อมูลคลังวัตถุดิบเป็นไฟล์ Excel (.xlsx) สำเร็จ');
   };
 
   return (
@@ -226,7 +211,7 @@ export default function InventoryLedger() {
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
             <Button variant="secondary" leftIcon={<RefreshCw size={14}/>} onClick={fetchAll}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14}/>} onClick={handleExportCsv}>Export CSV</Button>
+            <Button variant="secondary" leftIcon={<Download size={14}/>} onClick={handleExportCsv}>Export Excel</Button>
             <Button variant="secondary" leftIcon={<Boxes size={14}/>} onClick={() => setIngModal(true)}>วัตถุดิบ</Button>
             <Button leftIcon={<Plus size={14}/>} disabled={!branchId} onClick={() => setTxModal(true)}>ลงบันทึก</Button>
           </>

@@ -6,10 +6,11 @@ import {
   Search, RefreshCw, Layers, Info, Lock, Unlock, Clock,
   User, Banknote, TrendingDown, TrendingUp, Award,
   AlertTriangle, Activity, FileText, Check, DollarSign,
-  Boxes, ArrowRight, History, Sparkles, X, Eye, KeyRound
+  Boxes, ArrowRight, History, Sparkles, X, Eye, KeyRound, Download,
 } from 'lucide-react';
 import { PaginationControls, useClientPagination } from '../Pagination';
 import { API_BASE, authHeaders } from '../../api';
+import { exportSingleSheetToExcel } from '../../lib/excelExporter';
 
 export default function StockCheckView({ branch }: any) {
   const [activeTab, setActiveTab] = useState<'open_shop' | 'live_tracker' | 'close_shop' | 'history'>('open_shop');
@@ -399,6 +400,37 @@ export default function StockCheckView({ branch }: any) {
     }
   };
 
+  const handleExportExcel = () => {
+    if (!inventory || inventory.length === 0) {
+      alert('ไม่มีข้อมูลสต็อกของสาขานี้สำหรับ Export');
+      return;
+    }
+
+    const rows = liveCalculations.map((item: any) => {
+      const costPerUnit = item.ingredient?.costPerUnit || 0;
+      const totalVal = (item.quantity || 0) * costPerUnit;
+      return {
+        'รหัสวัตถุดิบ': item.ingredient?.sku || '-',
+        'ชื่อวัตถุดิบ': item.ingredient?.name || '-',
+        'สต็อกต้นกะ': item.starting || 0,
+        'รับเข้าเพิ่ม': item.stockIn || 0,
+        'ตัดใช้ในออเดอร์': item.deductions || 0,
+        'บันทึกของเสีย': item.manualWaste || 0,
+        'ปรับยอดอื่นๆ': item.adjustments || 0,
+        'สต็อกคงเหลือปัจจุบัน': item.quantity || 0,
+        'หน่วยนับ': item.ingredient?.unit || '',
+        'ต้นทุน/หน่วย (บาท)': costPerUnit,
+        'มูลค่าคงเหลือ (บาท)': Number(totalVal.toFixed(2)),
+      };
+    });
+
+    exportSingleSheetToExcel(
+      `456coffee_stock_${branch?.code || 'branch'}`,
+      'ตรวจสอบสต็อกสาขา',
+      rows,
+    );
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#fdfaf6] overflow-y-auto">
       {/* Header */}
@@ -419,36 +451,44 @@ export default function StockCheckView({ branch }: any) {
             </h1>
           </div>
 
-          <div className="flex bg-gray-100 p-1.5 rounded-2xl w-fit">
-            {currentShift ? (
-              <>
-                <button 
-                  onClick={() => setActiveTab('live_tracker')}
-                  className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'live_tracker' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
-                >
-                  <Activity size={15} /> Live Tracker
-                </button>
-                <button 
-                  onClick={() => setActiveTab('close_shop')}
-                  className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'close_shop' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
-                >
-                  <Lock size={15} /> Close Shop
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={() => setActiveTab('open_shop')}
-                className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'open_shop' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
-              >
-                <Unlock size={15} /> Open Shop
-              </button>
-            )}
-            <button 
-              onClick={() => setActiveTab('history')}
-              className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportExcel}
+              className="px-4 py-2.5 rounded-2xl font-black text-[11px] md:text-xs uppercase tracking-wider bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
             >
-              <History size={15} /> Shift History
+              <Download size={15} /> Export Excel
             </button>
+            <div className="flex bg-gray-100 p-1.5 rounded-2xl w-fit">
+              {currentShift ? (
+                <>
+                  <button 
+                    onClick={() => setActiveTab('live_tracker')}
+                    className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'live_tracker' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
+                  >
+                    <Activity size={15} /> Live Tracker
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('close_shop')}
+                    className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'close_shop' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
+                  >
+                    <Lock size={15} /> Close Shop
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setActiveTab('open_shop')}
+                  className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'open_shop' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
+                >
+                  <Unlock size={15} /> Open Shop
+                </button>
+              )}
+              <button 
+                onClick={() => setActiveTab('history')}
+                className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-[11px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-white text-[#7c543c] shadow-sm' : 'text-gray-400'}`}
+              >
+                <History size={15} /> Shift History
+              </button>
+            </div>
           </div>
         </div>
       </header>

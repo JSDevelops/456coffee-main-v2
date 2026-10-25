@@ -22,6 +22,7 @@ import {
   ImageIcon,
   Crown,
   Pencil,
+  Download,
 } from 'lucide-react';
 import { api } from '../api';
 import {
@@ -40,6 +41,7 @@ import {
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
+import { exportToExcel } from '../lib/excelExporter';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -254,6 +256,49 @@ export default function ProductsPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (!filtered || filtered.length === 0) {
+      toast.error('ไม่มีรายการสินค้าสำหรับ Export');
+      return;
+    }
+
+    const STATUS_MAP: Record<string, string> = {
+      AVAILABLE: 'เปิดขายปกติ',
+      OUT_OF_STOCK: 'หมดสต็อก',
+      HIDDEN: 'ซ่อนเมนู',
+    };
+
+    const productRows = filtered.map((p) => {
+      const cat = categories.find((c) => c.id === p.categoryId)?.name || '-';
+      return {
+        'ชื่อเมนู': p.name,
+        'หมวดหมู่': cat,
+        'ราคาหน้าร้าน (บาท)': p.price,
+        'ราคาเดลิเวอรี (บาท)': p.deliveryPrice || p.price,
+        'สถานะ': STATUS_MAP[p.status] || p.status,
+        'ลำดับการแสดง': p.sortOrder,
+        'ยอดสั่งซื้อ (ครั้ง)': p._count.orderItems,
+        'รายละเอียด': p.description || '-',
+      };
+    });
+
+    const categoryRows = categories.map((c) => ({
+      'ชื่อหมวดหมู่': c.name,
+      'ลำดับการแสดง': c.sortOrder,
+      'จำนวนสินค้าในหมวด': items.filter((it) => it.categoryId === c.id).length,
+    }));
+
+    exportToExcel({
+      filename: '456coffee_products',
+      sheets: [
+        { sheetName: 'รายการเมนูสินค้า', data: productRows },
+        { sheetName: 'หมวดหมู่สินค้า', data: categoryRows },
+      ],
+    });
+
+    toast.success(`ส่งออก ${filtered.length} เมนูเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+  };
+
   return (
     <>
       <PageHeader
@@ -264,6 +309,9 @@ export default function ProductsPage() {
           <>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
+            </Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportExcel}>
+              Export Excel
             </Button>
             <Button variant="secondary" leftIcon={<Layers size={14} />} onClick={() => setCatModal({ open: true })}>
               จัดการหมวด

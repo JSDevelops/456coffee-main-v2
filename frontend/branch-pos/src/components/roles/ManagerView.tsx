@@ -61,9 +61,11 @@ import {
   BookOpen,
   Pin,
   Link,
+  Download,
 } from 'lucide-react';
 import { API_BASE, auth, authHeaders } from '../../api';
 import { PaginationControls, useClientPagination } from '../Pagination';
+import { exportSingleSheetToExcel } from '../../lib/excelExporter';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Types
@@ -1429,6 +1431,28 @@ function HistoryTab({ branchId }: { branchId?: string }) {
     setPage(1);
   }, [from, to, search, status, platform]);
 
+  const handleExportHistoryExcel = () => {
+    if (!data || !data.rows.length) return;
+    const excelRows = data.rows.map((o: any, idx: number) => ({
+      'ลำดับ': idx + 1,
+      'เลขออเดอร์': o.orderNo || o.id,
+      'คิว': o.queueNo ? `#${o.queueNo}` : '-',
+      'วันที่และเวลา': o.createdAt ? new Date(o.createdAt).toLocaleString('th-TH') : '-',
+      'ลูกค้า': o.customerName || '-',
+      'เบอร์โทร': o.customerPhone || '-',
+      'ช่องทาง': o.platform || 'หน้าร้าน',
+      'สถานะ': STATUS_LABEL[o.status] || o.status,
+      'วิธีชำระเงิน': o.paymentMethod || '-',
+      'ยอดรวม (บาท)': o.total || 0,
+      'รายการสินค้า': (o.items || []).map((it: any) => `${it.productName || it.name || ''} x${it.quantity}`).join(', '),
+    }));
+    exportSingleSheetToExcel(
+      excelRows,
+      'ประวัติออเดอร์',
+      `456coffee_pos_orders_${from}_to_${to}.xlsx`
+    );
+  };
+
   return (
     <div className="p-5 sm:p-6 space-y-4">
       <Card>
@@ -1472,6 +1496,15 @@ function HistoryTab({ branchId }: { branchId?: string }) {
               <option value="LINE">LINE</option>
               <option value="FOODPANDA">Foodpanda</option>
             </select>
+            <button
+              onClick={handleExportHistoryExcel}
+              disabled={!data || data.rows.length === 0}
+              className="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-xl text-xs font-bold text-[#107c41] bg-[#107c41]/10 hover:bg-[#107c41]/20 transition-all border border-[#107c41]/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              title="ดาวน์โหลดประวัติออเดอร์ (.xlsx)"
+            >
+              <Download size={14} />
+              <span>Export Excel</span>
+            </button>
           </div>
         </div>
       </Card>
@@ -1997,6 +2030,31 @@ function ShiftTab({ branchId }: { branchId?: string }) {
     fetchAll();
   }, [fetchAll]);
 
+  const handleExportShiftExcel = () => {
+    if (!history.length) return;
+    const excelRows = history.map((s, idx) => ({
+      'ลำดับ': idx + 1,
+      'สถานะ': s.status === 'OPEN' ? 'เปิดอยู่' : 'ปิดกะแล้ว',
+      'เวลาเปิดกะ': s.openedAt ? new Date(s.openedAt).toLocaleString('th-TH') : '-',
+      'ผู้เปิดกะ': s.openedBy || '-',
+      'เงินสดเริ่มต้น (บาท)': s.openingCash ?? 0,
+      'เวลาปิดกะ': s.closedAt ? new Date(s.closedAt).toLocaleString('th-TH') : '-',
+      'ผู้ปิดกะ': s.closedBy || '-',
+      'ยอดขายเงินสด (บาท)': s.cashOrdersTotal ?? 0,
+      'เงินสดที่ควรมี (บาท)': s.expectedCash ?? 0,
+      'เงินสดนับจริง (บาท)': s.closingCash ?? 0,
+      'ส่วนต่าง (บาท)': s.variance ?? 0,
+      'จำนวนออเดอร์': s.ordersCount ?? 0,
+      'ยอดขายรวม (บาท)': s.totalRevenue ?? 0,
+      'หมายเหตุ': s.note || '',
+    }));
+    exportSingleSheetToExcel(
+      excelRows,
+      'ประวัติการเปิด-ปิดกะ',
+      `456coffee_shift_history_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+  };
+
   return (
     <div className="p-5 sm:p-6 space-y-5">
       {/* Current shift / Open shift */}
@@ -2037,6 +2095,18 @@ function ShiftTab({ branchId }: { branchId?: string }) {
           icon={<History size={16} />}
           title="ประวัติกะ"
           hint={`${history.length} กะล่าสุด`}
+          action={
+            history.length > 0 ? (
+              <button
+                onClick={handleExportShiftExcel}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#107c41] bg-[#107c41]/10 hover:bg-[#107c41]/20 transition-all border border-[#107c41]/20 cursor-pointer"
+                title="ดาวน์โหลดไฟล์ Excel (.xlsx)"
+              >
+                <Download size={14} />
+                <span>Export Excel</span>
+              </button>
+            ) : undefined
+          }
         />
         {loading ? (
           <div className="h-20 rounded-2xl bg-[#fdfaf6] animate-pulse" />

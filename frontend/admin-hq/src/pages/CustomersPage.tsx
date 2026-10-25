@@ -35,6 +35,7 @@ import {
   useToast,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
+import { exportSingleSheetToExcel } from '../lib/excelExporter';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
 
 interface AuthProvider {
@@ -160,43 +161,27 @@ export default function CustomersPage() {
       return;
     }
 
-    const headers = [
-      'ชื่อลูกค้า (Name)',
-      'เบอร์โทร (Phone)',
-      'อีเมล (Email)',
-      'ช่องทางล็อกอิน (Channels)',
-      'แต้มสะสม (Points)',
-      'จำนวนออเดอร์ (Total Orders)',
-      'วันที่สมัคร (Joined Date)',
-    ];
-
     const rows = filtered.map((u) => {
       const providers = u.authProviders.map((p) => p.provider).join(', ') || 'DIRECT';
       const dateStr = new Date(u.createdAt).toLocaleDateString('th-TH');
-      return [
-        `"${(u.name || '-').replace(/"/g, '""')}"`,
-        `"${u.phone || '-'}"`,
-        `"${u.email || '-'}"`,
-        `"${providers}"`,
-        u.points,
-        u._count.orders,
-        `"${dateStr}"`,
-      ].join(',');
+      return {
+        'ชื่อลูกค้า': u.name || '-',
+        'เบอร์โทรศัพท์': u.phone || '-',
+        'อีเมล': u.email || '-',
+        'ช่องทางสมัคร': providers,
+        'แต้มสะสม': u.points,
+        'จำนวนออเดอร์ทั้งหมด': u._count.orders,
+        'วันที่สมัครสมาชิก': dateStr,
+      };
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const dateTag = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.setAttribute('download', `456coffee_customers_${dateTag}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportSingleSheetToExcel(
+      '456coffee_customers',
+      'รายชื่อลูกค้าและสมาชิก',
+      rows,
+    );
 
-    toast.success(`ส่งออกข้อมูลลูกค้า ${filtered.length} รายการเป็น Excel / CSV สำเร็จ`);
+    toast.success(`ส่งออกข้อมูลลูกค้า ${filtered.length} รายการเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
   };
 
   return (
@@ -208,7 +193,7 @@ export default function CustomersPage() {
         actions={
           <>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export CSV</Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export Excel</Button>
           </>
         }
       />

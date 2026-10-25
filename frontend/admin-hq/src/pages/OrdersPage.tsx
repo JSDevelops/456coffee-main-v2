@@ -36,6 +36,7 @@ import {
   useToast,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
+import { exportToExcel } from '../lib/excelExporter';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -478,59 +479,58 @@ export default function OrdersPage() {
         return;
       }
 
-      const headers = [
-        'เลขที่ออเดอร์ (Order No)',
-        'วันเวลา (Date Time)',
-        'สาขา (Branch)',
-        'ลูกค้า (Customer)',
-        'จำนวนชิ้นรวม (Total Items)',
-        'รายการสินค้า (Items Detail)',
-        'ยอดชำระสุทธิ (Total Amount THB)',
-        'วิธีชำระเงิน (Payment Method)',
-        'สถานะการชำระ (Payment Status)',
-        'สถานะออเดอร์ (Order Status)',
-        'ประเภทรับสินค้า (Fulfillment)',
-      ];
-
-      const rows = exportList.map((o) => {
+      // Sheet 1: Detailed Orders
+      const orderRows = exportList.map((o) => {
         const branchName = o.branch?.name || '-';
         const customer = o.customerName || o.customerUid || '-';
         const itemsCount = o.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 0;
         const itemsDetail = (o.items || [])
           .map((it) => `${it.product?.name || it.productName || 'สินค้า'} x${it.quantity}`)
-          .join('; ');
+          .join(', ');
         const paymentMethod = o.payment?.method || '-';
         const paymentStatus = o.payment?.status || '-';
         const dateStr = new Date(o.createdAt).toLocaleString('th-TH');
 
-        return [
-          `"${o.orderNo}"`,
-          `"${dateStr}"`,
-          `"${branchName.replace(/"/g, '""')}"`,
-          `"${customer.replace(/"/g, '""')}"`,
-          itemsCount,
-          `"${itemsDetail.replace(/"/g, '""')}"`,
-          o.totalAmount.toFixed(2),
-          `"${paymentMethod}"`,
-          `"${paymentStatus}"`,
-          `"${o.status}"`,
-          `"${o.fulfillmentType || '-'}"`,
-        ].join(',');
+        return {
+          'เลขที่ออเดอร์': o.orderNo,
+          'วันเวลา': dateStr,
+          'สาขา': branchName,
+          'ลูกค้า': customer,
+          'จำนวนชิ้น': itemsCount,
+          'รายการสินค้า': itemsDetail,
+          'ยอดชำระสุทธิ (บาท)': o.totalAmount,
+          'วิธีชำระเงิน': paymentMethod,
+          'สถานะการชำระ': paymentStatus,
+          'สถานะออเดอร์': o.status,
+          'ประเภทรับสินค้า': o.fulfillmentType || '-',
+        };
       });
 
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const dateTag = new Date().toISOString().slice(0, 10);
-      link.href = url;
-      link.setAttribute('download', `456coffee_orders_${dateTag}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Sheet 2: Summary by Branch
+      const branchSummaryMap = new Map<string, { count: number; total: number }>();
+      for (const o of exportList) {
+        const bName = o.branch?.name || 'ไม่ระบุสาขา';
+        const curr = branchSummaryMap.get(bName) || { count: 0, total: 0 };
+        curr.count += 1;
+        curr.total += o.totalAmount;
+        branchSummaryMap.set(bName, curr);
+      }
+      const summaryRows = Array.from(branchSummaryMap.entries()).map(([branch, stat]) => ({
+        'สาขา': branch,
+        'จำนวนออเดอร์': stat.count,
+        'ยอดขายรวม (บาท)': Number(stat.total.toFixed(2)),
+        'ยอดเฉลี่ยต่อบิล (บาท)': Number((stat.total / (stat.count || 1)).toFixed(2)),
+      }));
 
-      toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็น Excel / CSV สำเร็จ`);
+      exportToExcel({
+        filename: '456coffee_orders',
+        sheets: [
+          { sheetName: 'รายการออเดอร์', data: orderRows },
+          { sheetName: 'สรุปยอดขายตามสาขา', data: summaryRows },
+        ],
+      });
+
+      toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็นไฟล์ Excel (.xlsx) สำเร็จ`);
     } catch (e: any) {
       toast.error(e?.message || 'ส่งออกข้อมูลไม่สำเร็จ');
     } finally {
@@ -551,7 +551,7 @@ export default function OrdersPage() {
               รีเฟรช
             </Button>
             <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv} loading={exporting}>
-              Export
+              Export Excel
             </Button>
           </>
         }

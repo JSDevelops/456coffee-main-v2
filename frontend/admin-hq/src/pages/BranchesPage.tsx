@@ -30,6 +30,7 @@ import {
   Smartphone,
   Eye,
   EyeOff,
+  Download,
 } from 'lucide-react';
 import { api } from '../api';
 import {
@@ -46,6 +47,7 @@ import {
   useToast,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
+import { exportSingleSheetToExcel } from '../lib/excelExporter';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -280,6 +282,33 @@ export default function BranchesPage() {
     setFormOpen(true);
   };
 
+  const handleExportExcel = () => {
+    if (!filtered || filtered.length === 0) {
+      toast.error('ไม่มีข้อมูลสาขาสำหรับ Export');
+      return;
+    }
+
+    const rows = filtered.map((b) => ({
+      'ชื่อสาขา': b.name,
+      'รหัสสาขา': b.code || '-',
+      'เบอร์โทรศัพท์': b.phone || '-',
+      'ที่อยู่': b.address || '-',
+      'เวลาเปิดทำการ': b.openTime || '-',
+      'เวลาปิดทำการ': b.closeTime || '-',
+      'สถานะสาขา': b.isActive ? 'เปิดให้บริการ' : 'ปิดชั่วคราว',
+      'จำนวนผู้จัดการ/พนักงาน': b.managers?.length || 0,
+      'ยอดออเดอร์สะสม': b._count?.orders || 0,
+    }));
+
+    exportSingleSheetToExcel(
+      '456coffee_branches',
+      'ข้อมูลสาขาทั้งหมด',
+      rows,
+    );
+
+    toast.success(`ส่งออกข้อมูล ${filtered.length} สาขาเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+  };
+
   return (
     <>
       <PageHeader
@@ -290,6 +319,9 @@ export default function BranchesPage() {
           <>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
+            </Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportExcel}>
+              Export Excel
             </Button>
             <Button leftIcon={<Plus size={14} />} onClick={openCreate}>
               เพิ่มสาขา

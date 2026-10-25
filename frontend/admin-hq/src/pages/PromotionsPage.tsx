@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Tag, Plus, Pencil, Trash2, ToggleLeft, ToggleRight,
   Percent, Banknote, Gift, ShoppingBag, X, Check, Loader2,
-  Copy, AlertCircle, Search,
+  Copy, AlertCircle, Search, Download,
 } from 'lucide-react';
 import { api } from '../api';
+import { exportSingleSheetToExcel } from '../lib/excelExporter';
 
 type PromotionType = 'PERCENT' | 'FIXED_AMOUNT' | 'BUY_X_GET_Y' | 'PRODUCT_DISCOUNT';
 
@@ -198,6 +199,37 @@ export default function PromotionsPage() {
     return `฿${p.value.toLocaleString()} / สินค้าที่ระบุ`;
   }
 
+  function handleExportExcel() {
+    if (!promotions || promotions.length === 0) {
+      alert('ไม่มีข้อมูลโปรโมชั่นสำหรับ Export');
+      return;
+    }
+
+    const rows = promotions.map((p) => {
+      const branchName = branches.find((b) => b.id === p.branchId)?.name || 'ทุกสาขา';
+      const typeLabel = TYPE_LABELS[p.type]?.label || p.type;
+      return {
+        'ชื่อโปรโมชั่น': p.name,
+        'โค้ดส่วนลด': p.code || '-',
+        'ประเภท': typeLabel,
+        'มูลค่าส่วนลด': formatValue(p),
+        'ยอดสั่งซื้อขั้นต่ำ (บาท)': p.minOrderAmount,
+        'สาขาที่ร่วมรายการ': branchName,
+        'จำนวนครั้งที่ใช้แล้ว': p.usageCount,
+        'จำกัดการใช้ (ครั้ง)': p.usageLimit || 'ไม่จำกัด',
+        'สถานะ': p.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน',
+        'วันที่เริ่มต้น': p.startDate ? new Date(p.startDate).toLocaleDateString('th-TH') : '-',
+        'วันที่สิ้นสุด': p.endDate ? new Date(p.endDate).toLocaleDateString('th-TH') : '-',
+      };
+    });
+
+    exportSingleSheetToExcel(
+      '456coffee_promotions',
+      'โปรโมชั่นและส่วนลด',
+      rows,
+    );
+  }
+
   // ─── UI ──────────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -212,13 +244,21 @@ export default function PromotionsPage() {
             สร้างและจัดการโปรโมชั่นสำหรับทุกสาขา
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white"
-          style={{ background: 'linear-gradient(135deg,#ea580c,#7c543c)' }}
-        >
-          <Plus size={16} /> สร้างโปรโมชั่น
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-all"
+          >
+            <Download size={16} /> Export Excel
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white"
+            style={{ background: 'linear-gradient(135deg,#ea580c,#7c543c)' }}
+          >
+            <Plus size={16} /> สร้างโปรโมชั่น
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

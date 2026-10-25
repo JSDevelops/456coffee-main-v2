@@ -27,6 +27,7 @@ import {
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
+import { exportSingleSheetToExcel } from '../lib/excelExporter';
 
 interface Branch { id: string; name: string }
 interface Cashflow {
@@ -164,34 +165,26 @@ export default function FinanceLedger() {
       return;
     }
 
-    const headers = ['วันที่เวลา', 'ประเภท', 'หมวดหมู่', 'จำนวนเงิน (บาท)', 'หมายเหตุ'];
     const rows = filtered.map((tx) => {
       const dateStr = new Date(tx.createdAt).toLocaleString('th-TH');
       const typeLabel = tx.type === 'INCOME' ? 'รายรับ' : 'รายจ่าย';
       const catLabel = CATEGORY_LABEL[tx.category] || tx.category;
-      const noteStr = (tx.note || '').replace(/"/g, '""');
-      return [
-        `"${dateStr}"`,
-        `"${typeLabel}"`,
-        `"${catLabel}"`,
-        tx.amount.toFixed(2),
-        `"${noteStr}"`,
-      ].join(',');
+      return {
+        'วันที่เวลา': dateStr,
+        'ประเภท': typeLabel,
+        'หมวดหมู่': catLabel,
+        'จำนวนเงิน (บาท)': tx.amount,
+        'หมายเหตุ': tx.note || '-',
+      };
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const dateTag = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.setAttribute('download', `456coffee_cashflow_${dateTag}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportSingleSheetToExcel(
+      '456coffee_cashflow',
+      'รายรับรายจ่าย',
+      rows,
+    );
 
-    toast.success(`ส่งออก ${filtered.length} รายการเป็น CSV สำเร็จ`);
+    toast.success(`ส่งออก ${filtered.length} รายการเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
   };
 
   return (
@@ -207,7 +200,7 @@ export default function FinanceLedger() {
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export CSV</Button>
+            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export Excel</Button>
             <Button leftIcon={<Plus size={14} />} disabled={!branchId} onClick={() => setModalOpen(true)}>ลงบันทึก</Button>
           </>
         }
