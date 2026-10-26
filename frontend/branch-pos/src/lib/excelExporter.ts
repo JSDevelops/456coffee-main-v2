@@ -12,20 +12,54 @@ export interface ExcelExportOptions {
 }
 
 /**
- * Robust cross-browser file download trigger using Blob and ObjectURL
+ * Standardizes filename so it always cleanly ends with the expected extension (.xlsx or .csv)
+ * without duplicate extensions like .xlsx_2026-10-26.csv
  */
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
+export function getFullFilename(baseName: string, ext: 'xlsx' | 'csv'): string {
+  const clean = (baseName || 'export')
+    .replace(/\.(xlsx|csv|xls)$/i, '')
+    .trim()
+    .replace(/[^a-zA-Z0-9_\-\u0E00-\u0E7F]/g, '_'); // Allow Thai, alphanumeric, dash, underscore
+  const timestamp = new Date().toISOString().slice(0, 10);
+  return `${clean}_${timestamp}.${ext}`;
+}
+
+/**
+ * Robust cross-browser file download trigger using File/Blob and ObjectURL
+ */
+function triggerDownload(blobOrFile: Blob | File, filename: string): void {
+  let fileToDownload: Blob = blobOrFile;
+  try {
+    if (typeof File !== 'undefined' && !(blobOrFile instanceof File)) {
+      fileToDownload = new File([blobOrFile], filename, { type: blobOrFile.type });
+    }
+  } catch {
+    fileToDownload = blobOrFile;
+  }
+
+  const url = URL.createObjectURL(fileToDownload);
   const link = document.createElement('a');
   link.style.display = 'none';
   link.href = url;
   link.setAttribute('download', filename);
   link.download = filename;
+  link.rel = 'noopener';
 
   document.body.appendChild(link);
-  link.click();
 
-  // Delay revoking ObjectURL to ensure browser download manager has completed fetching the blob
+  try {
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    link.dispatchEvent(clickEvent);
+  } catch {
+    link.click();
+  }
+
+  // Keep ObjectURL alive for 60 seconds (standard SheetJS duration)
+  // so browser download manager has completed fetching and user save dialogs don't fail
   setTimeout(() => {
     try {
       if (document.body.contains(link)) {
@@ -35,7 +69,7 @@ function triggerDownload(blob: Blob, filename: string): void {
     } catch {
       // ignore
     }
-  }, 2000);
+  }, 60000);
 }
 
 function autoFitColumns(data: Record<string, any>[]) {
@@ -81,10 +115,17 @@ export function exportToExcel({ filename, sheets }: ExcelExportOptions): void {
     XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
   }
 
-  const timestamp = new Date().toISOString().slice(0, 10);
-  const fullFilename = filename.endsWith('.xlsx')
-    ? filename
-    : `${filename}_${timestamp}.xlsx`;
+  const fullFilename = getFullFilename(filename, 'xlsx');
+
+  // Try XLSX.writeFile first as it is SheetJS's native cross-browser downloader
+  try {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      XLSX.writeFile(workbook, fullFilename, { compression: true });
+      return;
+    }
+  } catch (err) {
+    console.warn('XLSX.writeFile fallback to triggerDownload', err);
+  }
 
   const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([excelBuffer], {
@@ -131,6 +172,23 @@ export function exportToCsv(
   const data: Record<string, any>[] = Array.isArray(arg1) ? arg1 : Array.isArray(arg2) ? arg2 : [];
 
   if (!data || data.length === 0) return;
+
+  const fullFilename = getFullFilename(filename, 'csv');
+
+  // Try SheetJS native CSV download first
+  try {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      XLSX.writeFile(workbook, fullFilename, { bookType: 'csv' });
+      return;
+    }
+  } catch (err) {
+    console.warn('XLSX.writeFile CSV fallback to manual CSV generation', err);
+  }
+
+  // Fallback: Manual CSV with UTF-8 BOM
   const headers = Object.keys(data[0]);
   const csvRows = [
     headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(','),
@@ -145,9 +203,7 @@ export function exportToCsv(
   }
 
   const csvContent = '\uFEFF' + csvRows.join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const timestamp = new Date().toISOString().slice(0, 10);
-  const fullFilename = filename.endsWith('.csv') ? filename : `${filename}_${timestamp}.csv`;
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
 
   triggerDownload(blob, fullFilename);
 }
