@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coffee, MapPin, Phone, ShieldCheck, ExternalLink, Heart } from 'lucide-react';
+import { Coffee, MapPin, Phone, GraduationCap, Sprout, ShieldCheck, ExternalLink, Heart } from 'lucide-react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -23,43 +23,57 @@ export function Footer() {
                   456 <span className="text-[#EA580C]">COFFEE</span>
                 </span>
                 <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EA580C]/20 text-[#EA580C]">
-                  HQ
+                  ECOSYSTEM
                 </span>
               </div>
             </div>
 
             <p className="text-sm text-[#DDB892] max-w-sm leading-relaxed">
-              กาแฟโรบัสต้าแท้จากแหล่งปลูกเทือกเขาภูพาน จังหวัดกาฬสินธุ์ 
-              ยกระดับผลผลิตเกษตรกรไทยสู่กาแฟคุณภาพระดับสากล หอม เข้ม กลมกล่อมทุกแก้ว
+              ระบบนิเวศกาแฟโรบัสต้าภูพานครบวงจร: เชื่อมโยงเกษตรกรแปลงปลูก สถาบันอบรมบาริสต้า 
+              และร้านค้าคาเฟ่คุณภาพ เพื่อการเติบโตที่ยั่งยืนของกาแฟไทย
             </p>
 
-            <div className="pt-2 text-xs text-[#A68A78] space-y-1">
-              <div>📍 สำนักงานใหญ่ & สาขาหลัก: อ.เมือง จ.กาฬสินธุ์</div>
-              <div>📞 เบอร์โทรศัพท์: 061-305-5625</div>
-              <div>🌐 โดเมนหลัก: coffee-cafe.shop</div>
+            <div className="pt-2 text-xs text-[#A68A78] space-y-1.5">
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-[#EA580C]" />
+                <span>สำนักงานใหญ่ & สาขาหลัก: อ.เมือง จ.กาฬสินธุ์</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="text-[#EA580C]" />
+                <span>เบอร์โทรศัพท์: 061-305-5625</span>
+              </div>
             </div>
           </div>
 
-          {/* Col 2: Quick Links (3 cols) */}
+          {/* Col 2: 3 Pillars Quick Links (3 cols) */}
           <div className="lg:col-span-3 space-y-3">
             <h4 className="font-heading font-bold text-sm text-white uppercase tracking-wider">
-              เมนูแนะนำ
+              3 เสาหลัก 456
             </h4>
-            <ul className="space-y-2 text-xs text-[#DDB892]">
+            <ul className="space-y-2.5 text-xs text-[#DDB892]">
               <li>
-                <a href="#story" className="hover:text-[#EA580C] transition-colors">เรื่องราวขุนเขาภูพาน</a>
+                <a href="#map" className="hover:text-[#EA580C] transition-colors flex items-center gap-1.5">
+                  <MapPin size={13} className="text-[#EA580C]" />
+                  แผนที่ปักหมุดระบบนิเวศ
+                </a>
               </li>
               <li>
-                <a href="#menu" className="hover:text-[#EA580C] transition-colors">เมนูซิกเนเจอร์ & เบเกอรี่</a>
+                <a href="#cafes" className="hover:text-[#EA580C] transition-colors flex items-center gap-1.5">
+                  <Coffee size={13} className="text-[#EA580C]" />
+                  ร้านค้าคาเฟ่ 456 Coffee
+                </a>
               </li>
               <li>
-                <a href="#rewards" className="hover:text-[#EA580C] transition-colors">ระบบสะสมแต้ม 456 Rewards</a>
+                <a href="#plantations" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                  <Sprout size={13} className="text-emerald-400" />
+                  พื้นที่ปลูก & จองต้นพันธุ์
+                </a>
               </li>
               <li>
-                <a href="#branches" className="hover:text-[#EA580C] transition-colors">สาขาเมืองกาฬสินธุ์ & ศูนย์โอท็อป</a>
-              </li>
-              <li>
-                <a href="#franchise" className="hover:text-[#EA580C] transition-colors">บริการออกบูธ & แฟรนไชส์</a>
+                <a href="#academy" className="hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                  <GraduationCap size={13} className="text-amber-400" />
+                  456 Academy อบรมเปิดร้าน
+                </a>
               </li>
             </ul>
           </div>
@@ -67,7 +81,7 @@ export function Footer() {
           {/* Col 3: Ecosystem & Admin Access (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
             <h4 className="font-heading font-bold text-sm text-white uppercase tracking-wider">
-              ระบบดิจิทัลในเครือ 456
+              ระบบดิจิทัลในเครือข่าย
             </h4>
 
             {/* Admin HQ Card */}
@@ -104,8 +118,8 @@ export function Footer() {
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm">🌿</span>
                   <div>
-                    <div className="text-xs font-bold text-white group-hover:text-[#EA580C] transition-colors">
-                      โครงการกาแฟโรบัสต้าภูพาน
+                    <div className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
+                      เครือข่ายผู้ปลูกกาแฟภูพาน
                     </div>
                     <div className="text-[10px] text-[#A68A78]">
                       coffee-phupan.ai.studio
@@ -121,12 +135,12 @@ export function Footer() {
 
         {/* Bottom Credits & Copyright */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#A68A78]">
-          <div className="flex items-center gap-1">
-            <span>© {currentYear} 456 Coffee. ลิขสิทธิ์ถูกต้องทุกประการ.</span>
+          <div>
+            <span>© {currentYear} 456 Coffee Ecosystem. All rights reserved.</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span>กาแฟไทยคุณภาพ จากเทือกเขาภูพาน สู่สายตาคนทั้งโลก</span>
+          <div className="flex items-center gap-1.5">
+            <span>จากเทือกเขาภูพานสู่แก้วกาแฟคุณภาพของคุณ</span>
             <Heart size={12} className="text-[#EF4444] fill-[#EF4444]" />
           </div>
         </div>
