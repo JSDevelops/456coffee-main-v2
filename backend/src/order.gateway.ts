@@ -19,6 +19,7 @@ const allowedSocketOrigins = Array.from(
     ...configuredOrigins,
     'https://465coffee.vercel.app',
     'https://465coffee-nine.vercel.app',
+    'https://456.coffee-cafe.shop',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
@@ -31,7 +32,8 @@ const allowedSocketOrigins = Array.from(
       if (!origin) return callback(null, true);
       const isAllowed =
         allowedSocketOrigins.includes(origin) ||
-        /^https:\/\/465coffee.*\.vercel\.app$/.test(origin);
+        /^https:\/\/465coffee.*\.vercel\.app$/.test(origin) ||
+        /^https:\/\/.*\.coffee-cafe\.shop$/.test(origin);
       callback(null, isAllowed);
     },
     credentials: true,
