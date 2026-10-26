@@ -38,10 +38,11 @@ import {
   Skeleton,
   Textarea,
   useToast,
+  ExportDropdown,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
-import { exportToExcel } from '../lib/excelExporter';
+import { exportToExcel, exportToCsv } from '../lib/excelExporter';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -288,15 +289,19 @@ export default function ProductsPage() {
       'จำนวนสินค้าในหมวด': items.filter((it) => it.categoryId === c.id).length,
     }));
 
-    exportToExcel({
-      filename: '456coffee_products',
-      sheets: [
-        { sheetName: 'รายการเมนูสินค้า', data: productRows },
-        { sheetName: 'หมวดหมู่สินค้า', data: categoryRows },
-      ],
-    });
-
-    toast.success(`ส่งออก ${filtered.length} เมนูเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    if (format === 'xlsx') {
+      exportToExcel({
+        filename: '456coffee_products',
+        sheets: [
+          { sheetName: 'รายการเมนูสินค้า', data: productRows },
+          { sheetName: 'หมวดหมู่สินค้า', data: categoryRows },
+        ],
+      });
+      toast.success(`ส่งออก ${filtered.length} เมนูเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    } else {
+      exportToCsv('456coffee_products', productRows);
+      toast.success(`ส่งออก ${filtered.length} เมนูเป็นไฟล์ CSV (.csv) สำเร็จ`);
+    }
   };
 
   return (
@@ -310,9 +315,7 @@ export default function ProductsPage() {
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
             </Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportExcel}>
-              Export Excel
-            </Button>
+            <ExportDropdown onExport={handleExportExcel} />
             <Button variant="secondary" leftIcon={<Layers size={14} />} onClick={() => setCatModal({ open: true })}>
               จัดการหมวด
             </Button>

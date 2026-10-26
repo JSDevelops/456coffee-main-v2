@@ -22,9 +22,10 @@ import {
   Select,
   Skeleton,
   useToast,
+  ExportDropdown,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
-import { exportSingleSheetToExcel } from '../lib/excelExporter';
+import { exportSingleSheetToExcel, exportToCsv } from '../lib/excelExporter';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
 
 interface Recipe {
@@ -116,7 +117,7 @@ export default function CostManagement() {
   const lowMarginCount = items.filter((i) => i.marginPercentage < MARGIN_THRESHOLDS.ok && i.price > 0).length;
   const noRecipeCount = items.filter((i) => i.recipes.length === 0).length;
 
-  const handleExportCsv = () => {
+  const handleExport = (format: 'xlsx' | 'csv') => {
     if (!filtered || filtered.length === 0) {
       toast.error('ไม่มีข้อมูลต้นทุนสำหรับ Export');
       return;
@@ -137,13 +138,17 @@ export default function CostManagement() {
       };
     });
 
-    exportSingleSheetToExcel(
-      '456coffee_cost_analysis',
-      'วิเคราะห์ต้นทุนและกำไร',
-      rows,
-    );
-
-    toast.success(`ส่งออกข้อมูลต้นทุน ${filtered.length} เมนูเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    if (format === 'xlsx') {
+      exportSingleSheetToExcel(
+        '456coffee_cost_analysis',
+        'วิเคราะห์ต้นทุนและกำไร',
+        rows,
+      );
+      toast.success(`ส่งออกข้อมูลต้นทุน ${filtered.length} เมนูเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    } else {
+      exportToCsv('456coffee_cost_analysis', rows);
+      toast.success(`ส่งออกข้อมูลต้นทุน ${filtered.length} เมนูเป็นไฟล์ CSV (.csv) สำเร็จ`);
+    }
   };
 
   return (
@@ -155,7 +160,7 @@ export default function CostManagement() {
         actions={
           <>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetch}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export Excel</Button>
+            <ExportDropdown onExport={handleExport} />
           </>
         }
       />

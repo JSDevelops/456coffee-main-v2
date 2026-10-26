@@ -9,11 +9,11 @@ import {
 import { api } from '../api';
 import {
   Badge, Button, Card, EmptyState, Input, Modal, Select,
-  Skeleton, Textarea, useToast,
+  Skeleton, Textarea, useToast, ExportDropdown,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
-import { exportToExcel } from '../lib/excelExporter';
+import { exportToExcel, exportToCsv } from '../lib/excelExporter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Branch { id: string; name: string }
@@ -182,20 +182,26 @@ export default function InventoryLedger() {
       return;
     }
 
-    const sheets = [];
-    if (stockRows.length > 0) {
-      sheets.push({ sheetName: 'สต็อกคงเหลือ', data: stockRows });
-    }
-    if (txRows.length > 0) {
-      sheets.push({ sheetName: 'ประวัติการรับ-เบิก', data: txRows });
-    }
+    if (format === 'xlsx') {
+      const sheets = [];
+      if (stockRows.length > 0) {
+        sheets.push({ sheetName: 'สต็อกคงเหลือ', data: stockRows });
+      }
+      if (txRows.length > 0) {
+        sheets.push({ sheetName: 'ประวัติการรับ-เบิก', data: txRows });
+      }
 
-    exportToExcel({
-      filename: '456coffee_inventory',
-      sheets,
-    });
+      exportToExcel({
+        filename: '456coffee_inventory',
+        sheets,
+      });
 
-    toast.success('ส่งออกข้อมูลคลังวัตถุดิบเป็นไฟล์ Excel (.xlsx) สำเร็จ');
+      toast.success('ส่งออกข้อมูลคลังวัตถุดิบเป็นไฟล์ Excel (.xlsx) สำเร็จ');
+    } else {
+      const activeRows = tab === 'history' ? txRows : stockRows.length > 0 ? stockRows : txRows;
+      exportToCsv('456coffee_inventory', activeRows);
+      toast.success('ส่งออกข้อมูลคลังวัตถุดิบเป็นไฟล์ CSV (.csv) สำเร็จ');
+    }
   };
 
   return (
@@ -211,7 +217,7 @@ export default function InventoryLedger() {
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
             <Button variant="secondary" leftIcon={<RefreshCw size={14}/>} onClick={fetchAll}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14}/>} onClick={handleExportCsv}>Export Excel</Button>
+            <ExportDropdown onExport={handleExportCsv} />
             <Button variant="secondary" leftIcon={<Boxes size={14}/>} onClick={() => setIngModal(true)}>วัตถุดิบ</Button>
             <Button leftIcon={<Plus size={14}/>} disabled={!branchId} onClick={() => setTxModal(true)}>ลงบันทึก</Button>
           </>

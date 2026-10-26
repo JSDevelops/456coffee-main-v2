@@ -24,10 +24,11 @@ import {
   Skeleton,
   Textarea,
   useToast,
+  ExportDropdown,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
-import { exportSingleSheetToExcel } from '../lib/excelExporter';
+import { exportSingleSheetToExcel, exportToCsv } from '../lib/excelExporter';
 
 interface Branch { id: string; name: string }
 interface Cashflow {
@@ -159,7 +160,7 @@ export default function FinanceLedger() {
     (datePreset !== '30d' ? 1 : 0) + (typeFilter ? 1 : 0) + (categoryFilter ? 1 : 0) + (search ? 1 : 0);
   const reset = () => { setDatePreset('30d'); setTypeFilter(''); setCategoryFilter(''); setSearch(''); };
 
-  const handleExportCsv = () => {
+  const handleExport = (format: 'xlsx' | 'csv') => {
     if (!filtered || filtered.length === 0) {
       toast.error('ไม่มีข้อมูลรายการสำหรับ Export');
       return;
@@ -178,13 +179,17 @@ export default function FinanceLedger() {
       };
     });
 
-    exportSingleSheetToExcel(
-      '456coffee_cashflow',
-      'รายรับรายจ่าย',
-      rows,
-    );
-
-    toast.success(`ส่งออก ${filtered.length} รายการเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    if (format === 'xlsx') {
+      exportSingleSheetToExcel(
+        '456coffee_cashflow',
+        'รายรับรายจ่าย',
+        rows,
+      );
+      toast.success(`ส่งออก ${filtered.length} รายการเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    } else {
+      exportToCsv('456coffee_cashflow', rows);
+      toast.success(`ส่งออก ${filtered.length} รายการเป็นไฟล์ CSV (.csv) สำเร็จ`);
+    }
   };
 
   return (
@@ -200,7 +205,7 @@ export default function FinanceLedger() {
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export Excel</Button>
+            <ExportDropdown onExport={handleExport} />
             <Button leftIcon={<Plus size={14} />} disabled={!branchId} onClick={() => setModalOpen(true)}>ลงบันทึก</Button>
           </>
         }

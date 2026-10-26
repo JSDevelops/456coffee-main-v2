@@ -453,6 +453,7 @@ export class OrderService {
     status?: string;
     date?: string;
     dateFrom?: string;
+    dateTo?: string;
     search?: string;
     paymentMethod?: string;
     fulfillmentType?: string;
@@ -473,8 +474,17 @@ export class OrderService {
     if (filters?.date) {
       const d = new Date(filters.date);
       where.createdAt = { gte: d, lt: new Date(d.getTime() + 86400000) };
+    } else if (filters?.dateFrom && filters?.dateTo) {
+      const start = new Date(filters.dateFrom);
+      const end = new Date(filters.dateTo);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
     } else if (filters?.dateFrom) {
       where.createdAt = { gte: new Date(filters.dateFrom) };
+    } else if (filters?.dateTo) {
+      const end = new Date(filters.dateTo);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { lte: end };
     }
     if (filters?.search) {
       where.OR = [

@@ -45,9 +45,10 @@ import {
   Skeleton,
   Textarea,
   useToast,
+  ExportDropdown,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
-import { exportSingleSheetToExcel } from '../lib/excelExporter';
+import { exportSingleSheetToExcel, exportToCsv } from '../lib/excelExporter';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -300,13 +301,17 @@ export default function BranchesPage() {
       'ยอดออเดอร์สะสม': b._count?.orders || 0,
     }));
 
-    exportSingleSheetToExcel(
-      '456coffee_branches',
-      'ข้อมูลสาขาทั้งหมด',
-      rows,
-    );
-
-    toast.success(`ส่งออกข้อมูล ${filtered.length} สาขาเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    if (format === 'xlsx') {
+      exportSingleSheetToExcel(
+        '456coffee_branches',
+        'ข้อมูลสาขาทั้งหมด',
+        rows,
+      );
+      toast.success(`ส่งออกข้อมูล ${filtered.length} สาขาเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    } else {
+      exportToCsv('456coffee_branches', rows);
+      toast.success(`ส่งออกข้อมูล ${filtered.length} สาขาเป็นไฟล์ CSV (.csv) สำเร็จ`);
+    }
   };
 
   return (
@@ -320,9 +325,7 @@ export default function BranchesPage() {
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
             </Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportExcel}>
-              Export Excel
-            </Button>
+            <ExportDropdown onExport={handleExport} />
             <Button leftIcon={<Plus size={14} />} onClick={openCreate}>
               เพิ่มสาขา
             </Button>

@@ -5,7 +5,8 @@ import {
   Copy, AlertCircle, Search, Download,
 } from 'lucide-react';
 import { api } from '../api';
-import { exportSingleSheetToExcel } from '../lib/excelExporter';
+import { exportSingleSheetToExcel, exportToCsv } from '../lib/excelExporter';
+import { ExportDropdown } from '../components/ui';
 
 type PromotionType = 'PERCENT' | 'FIXED_AMOUNT' | 'BUY_X_GET_Y' | 'PRODUCT_DISCOUNT';
 
@@ -223,11 +224,15 @@ export default function PromotionsPage() {
       };
     });
 
-    exportSingleSheetToExcel(
-      '456coffee_promotions',
-      'โปรโมชั่นและส่วนลด',
-      rows,
-    );
+    if (format === 'xlsx') {
+      exportSingleSheetToExcel(
+        '456coffee_promotions',
+        'โปรโมชั่นและส่วนลด',
+        rows,
+      );
+    } else {
+      exportToCsv('456coffee_promotions', rows);
+    }
   }
 
   // ─── UI ──────────────────────────────────────────────────────────────────────
@@ -245,12 +250,7 @@ export default function PromotionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-all"
-          >
-            <Download size={16} /> Export Excel
-          </button>
+          <ExportDropdown onExport={handleExportExcel} />
           <button
             onClick={openCreate}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white"

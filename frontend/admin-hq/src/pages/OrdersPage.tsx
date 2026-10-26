@@ -139,13 +139,13 @@ const FULFILLMENT_LABEL: Record<string, string> = {
   DELIVERY: 'จัดส่ง',
 };
 
-type DatePreset = 'today' | 'yesterday' | '7d' | '30d' | 'all';
+type DatePreset = 'today' | 'yesterday' | '7d' | '30d' | 'custom';
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
   { id: 'today',     label: 'วันนี้' },
   { id: 'yesterday', label: 'เมื่อวาน' },
   { id: '7d',        label: '7 วัน' },
   { id: '30d',       label: '30 วัน' },
-  { id: 'all',       label: 'ทั้งหมด' },
+  { id: 'custom',    label: 'กำหนดเอง' },
 ];
 
 type SortKey = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc';
@@ -174,7 +174,7 @@ function relativeTime(iso: string): string {
 }
 
 function dateForPreset(preset: DatePreset): string | undefined {
-  if (preset === 'all') return undefined;
+  if (preset === 'custom') return undefined;
   const d = new Date();
   if (preset === 'today') return d.toISOString().slice(0, 10);
   if (preset === 'yesterday') {
@@ -217,6 +217,14 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().slice(0, 10);
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
   const [branchId, setBranchId] = useState<string>('');
   const [statusSet, setStatusSet] = useState<Set<string>>(new Set());
   const [paymentSet, setPaymentSet] = useState<Set<string>>(new Set());
@@ -238,7 +246,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, datePreset, branchId, statusSet, paymentSet, fulfillmentSet, sortKey, pageSize]);
+  }, [debouncedSearch, datePreset, customStartDate, customEndDate, branchId, statusSet, paymentSet, fulfillmentSet, sortKey, pageSize]);
 
   useEffect(() => {
     api.get<Branch[]>('/branches/admin')
@@ -261,10 +269,15 @@ export default function OrdersPage() {
       const params = new URLSearchParams();
       if (branchId) params.set('branchId', branchId);
       if (debouncedSearch) params.set('search', debouncedSearch);
-      const date = dateForPreset(datePreset);
-      if (date) params.set('date', date);
-      const dateAfter = dateAfterForPreset(datePreset);
-      if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
+      if (datePreset === 'custom') {
+        if (customStartDate) params.set('dateFrom', customStartDate);
+        if (customEndDate) params.set('dateTo', customEndDate);
+      } else {
+        const date = dateForPreset(datePreset);
+        if (date) params.set('date', date);
+        const dateAfter = dateAfterForPreset(datePreset);
+        if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
+      }
       if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
       if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
       if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
@@ -284,6 +297,8 @@ export default function OrdersPage() {
     branchId,
     debouncedSearch,
     datePreset,
+    customStartDate,
+    customEndDate,
     fulfillmentSet,
     page,
     pageSize,
@@ -470,10 +485,15 @@ export default function OrdersPage() {
       const params = new URLSearchParams();
       if (branchId) params.set('branchId', branchId);
       if (debouncedSearch) params.set('search', debouncedSearch);
-      const date = dateForPreset(datePreset);
-      if (date) params.set('date', date);
-      const dateAfter = dateAfterForPreset(datePreset);
-      if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
+      if (datePreset === 'custom') {
+        if (customStartDate) params.set('dateFrom', customStartDate);
+        if (customEndDate) params.set('dateTo', customEndDate);
+      } else {
+        const date = dateForPreset(datePreset);
+        if (date) params.set('date', date);
+        const dateAfter = dateAfterForPreset(datePreset);
+        if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
+      }
       if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
       if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
       if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
@@ -653,6 +673,10 @@ export default function OrdersPage() {
         onSearchChange={setSearch}
         datePreset={datePreset}
         onDatePresetChange={setDatePreset}
+        customStartDate={customStartDate}
+        onCustomStartDateChange={setCustomStartDate}
+        customEndDate={customEndDate}
+        onCustomEndDateChange={setCustomEndDate}
         branchId={branchId}
         onBranchChange={setBranchId}
         branches={branches}
@@ -774,6 +798,10 @@ interface FilterBarProps {
   onSearchChange: (v: string) => void;
   datePreset: DatePreset;
   onDatePresetChange: (d: DatePreset) => void;
+  customStartDate: string;
+  onCustomStartDateChange: (v: string) => void;
+  customEndDate: string;
+  onCustomEndDateChange: (v: string) => void;
   branchId: string;
   onBranchChange: (id: string) => void;
   branches: Branch[];
@@ -826,7 +854,7 @@ function FilterBar(props: FilterBarProps) {
                 <button
                   key={p.id}
                   onClick={() => props.onDatePresetChange(p.id)}
-                  className="h-8 px-3 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
+                  className="h-8 px-3 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
                   style={{
                     background: active ? 'var(--surface)' : 'transparent',
                     color: active ? 'var(--accent)' : 'var(--text-muted)',
@@ -839,6 +867,33 @@ function FilterBar(props: FilterBarProps) {
               );
             })}
           </div>
+
+          {/* Custom Date Range Picker when 'กำหนดเอง' is selected */}
+          {props.datePreset === 'custom' && (
+            <div
+              className="inline-flex h-10 items-center gap-1.5 px-3 rounded-xl text-xs font-semibold"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+            >
+              <Calendar size={13} style={{ color: 'var(--accent)' }} />
+              <input
+                type="date"
+                value={props.customStartDate}
+                onChange={(e) => props.onCustomStartDateChange(e.target.value)}
+                className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer"
+                style={{ color: 'var(--text)' }}
+                title="วันที่เริ่มต้น"
+              />
+              <span style={{ color: 'var(--text-muted)' }}>ถึง</span>
+              <input
+                type="date"
+                value={props.customEndDate}
+                onChange={(e) => props.onCustomEndDateChange(e.target.value)}
+                className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer"
+                style={{ color: 'var(--text)' }}
+                title="วันที่สิ้นสุด"
+              />
+            </div>
+          )}
 
           <Select
             containerClassName="min-w-[140px]"

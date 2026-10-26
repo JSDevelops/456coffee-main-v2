@@ -33,9 +33,10 @@ import {
   Skeleton,
   Textarea,
   useToast,
+  ExportDropdown,
 } from '../components/ui';
 import { PageHeader } from '../components/layout/PageHeader';
-import { exportSingleSheetToExcel } from '../lib/excelExporter';
+import { exportSingleSheetToExcel, exportToCsv } from '../lib/excelExporter';
 import { Pagination, paginateItems } from '../components/ui/Pagination';
 
 interface AuthProvider {
@@ -155,7 +156,7 @@ export default function CustomersPage() {
     }
   };
 
-  const handleExportCsv = () => {
+  const handleExport = (format: 'xlsx' | 'csv') => {
     if (!filtered || filtered.length === 0) {
       toast.error('ไม่มีข้อมูลลูกค้าสำหรับ Export');
       return;
@@ -175,13 +176,17 @@ export default function CustomersPage() {
       };
     });
 
-    exportSingleSheetToExcel(
-      '456coffee_customers',
-      'รายชื่อลูกค้าและสมาชิก',
-      rows,
-    );
-
-    toast.success(`ส่งออกข้อมูลลูกค้า ${filtered.length} รายการเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    if (format === 'xlsx') {
+      exportSingleSheetToExcel(
+        '456coffee_customers',
+        'รายชื่อลูกค้าและสมาชิก',
+        rows,
+      );
+      toast.success(`ส่งออกข้อมูลลูกค้า ${filtered.length} รายการเป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+    } else {
+      exportToCsv('456coffee_customers', rows);
+      toast.success(`ส่งออกข้อมูลลูกค้า ${filtered.length} รายการเป็นไฟล์ CSV (.csv) สำเร็จ`);
+    }
   };
 
   return (
@@ -193,7 +198,7 @@ export default function CustomersPage() {
         actions={
           <>
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>รีเฟรช</Button>
-            <Button variant="secondary" leftIcon={<Download size={14} />} onClick={handleExportCsv}>Export Excel</Button>
+            <ExportDropdown onExport={handleExport} />
           </>
         }
       />

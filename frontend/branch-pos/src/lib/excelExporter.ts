@@ -94,11 +94,29 @@ export function exportToExcel({ filename, sheets }: ExcelExportOptions): void {
 }
 
 export function exportSingleSheetToExcel(
-  filename: string,
-  sheetName: string,
-  data: Record<string, any>[],
+  arg1: any,
+  arg2: any,
+  arg3?: any,
   headers?: Record<string, string>,
 ): void {
+  let filename = 'export';
+  let sheetName = 'Sheet1';
+  let data: Record<string, any>[] = [];
+
+  if (Array.isArray(arg1)) {
+    data = arg1;
+    sheetName = typeof arg2 === 'string' ? arg2 : 'Sheet1';
+    filename = typeof arg3 === 'string' ? arg3 : 'export';
+  } else if (Array.isArray(arg3)) {
+    filename = typeof arg1 === 'string' ? arg1 : 'export';
+    sheetName = typeof arg2 === 'string' ? arg2 : 'Sheet1';
+    data = arg3;
+  } else if (Array.isArray(arg2)) {
+    filename = typeof arg1 === 'string' ? arg1 : 'export';
+    data = arg2;
+    sheetName = typeof arg3 === 'string' ? arg3 : 'Sheet1';
+  }
+
   exportToExcel({
     filename,
     sheets: [{ sheetName, data, headers }],
@@ -106,9 +124,12 @@ export function exportSingleSheetToExcel(
 }
 
 export function exportToCsv(
-  filename: string,
-  data: Record<string, any>[],
+  arg1: any,
+  arg2: any,
 ): void {
+  const filename = typeof arg1 === 'string' ? arg1 : typeof arg2 === 'string' ? arg2 : 'export';
+  const data: Record<string, any>[] = Array.isArray(arg1) ? arg1 : Array.isArray(arg2) ? arg2 : [];
+
   if (!data || data.length === 0) return;
   const headers = Object.keys(data[0]);
   const csvRows = [
