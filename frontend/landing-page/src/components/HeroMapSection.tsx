@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Coffee, Sprout, GraduationCap, MapPin, Phone, Clock, ExternalLink, Sparkles, Navigation, Layers, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { fetchLocationsApi } from '../api';
 
 export type PinType = 'all' | 'cafe' | 'plantation' | 'academy';
 
@@ -22,6 +23,7 @@ export interface LocationItem {
 export function HeroMapSection() {
   const [filter, setFilter] = useState<PinType>('all');
   const [selectedPin, setSelectedPin] = useState<LocationItem | null>(null);
+  const [dynamicLocations, setDynamicLocations] = useState<LocationItem[]>([]);
 
   const locations: LocationItem[] = [
     // 1. Cafes
@@ -133,12 +135,46 @@ export function HeroMapSection() {
     },
   ];
 
+  useEffect(() => {
+    fetchLocationsApi()
+      .then((res) => {
+        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          // Normalize API pins
+          const dynamicPins: LocationItem[] = res.data.map((item: any, idx: number) => ({
+            id: item.id || `dyn-${idx}`,
+            type: (item.type?.toLowerCase() === 'cafe' ? 'cafe' : item.type?.toLowerCase() === 'plantation' ? 'plantation' : 'academy') as any,
+            name: item.name,
+            badge: item.badge || (item.type === 'CAFE' ? 'Cafe Branch' : item.type === 'PLANTATION' ? 'เครือข่ายภูพาน' : 'Academy Hub'),
+            district: item.district || 'อ.เมือง',
+            province: item.province || 'จ.กาฬสินธุ์',
+            // Default coords if needed
+            coords: {
+              x: 35 + ((idx * 17) % 50),
+              y: 30 + ((idx * 23) % 45),
+            },
+            hoursOrCapacity: item.hoursOrCapacity || 'เปิดบริการ',
+            phone: item.phone,
+            details: item.details || item.name,
+            stats: item.stats,
+            actionText: item.actionText || 'ดูข้อมูล',
+            actionHref: item.actionHref || '#map',
+          }));
+          setDynamicLocations(dynamicPins);
+        }
+      })
+      .catch((err) => {
+        console.warn('Using default locations:', err);
+      });
+  }, []);
+
+  const activeLocationsList = dynamicLocations.length > 0 ? dynamicLocations : locations;
+
   const filteredLocations = filter === 'all' 
-    ? locations 
-    : locations.filter(l => l.type === filter);
+    ? activeLocationsList 
+    : activeLocationsList.filter(l => l.type === filter);
 
   // Set default selected pin
-  const currentSelected = selectedPin || locations[0];
+  const currentSelected = selectedPin || activeLocationsList[0];
 
   return (
     <section id="map" className="relative pt-28 pb-20 md:pt-36 md:pb-28 bg-[#231205] text-white overflow-hidden">

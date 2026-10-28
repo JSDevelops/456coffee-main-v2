@@ -17,6 +17,8 @@ import ProfilePage from './pages/ProfilePage';
 import PromotionsPage from './pages/PromotionsPage';
 import SalesChannelsPage from './pages/SalesChannelsPage';
 import AnnouncementsPage from './pages/AnnouncementsPage';
+import AcademyAdminPage from './pages/AcademyAdminPage';
+import PlantationsAdminPage from './pages/PlantationsAdminPage';
 
 const VALID_PAGES: Page[] = [
   'overview',
@@ -32,6 +34,8 @@ const VALID_PAGES: Page[] = [
   'settings',
   'profile',
   'announcements',
+  'academy',
+  'plantations',
 ];
 
 function readPageFromHash(): Page {
@@ -125,6 +129,8 @@ export default function App() {
         {page === 'channels'   && <SalesChannelsPage />}
         {page === 'settings'   && <SettingsPage />}
         {page === 'announcements' && <AnnouncementsPage />}
+        {page === 'academy' && <AcademyAdminPage />}
+        {page === 'plantations' && <PlantationsAdminPage />}
         {page === 'profile' && (
           <ProfilePage theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />
         )}

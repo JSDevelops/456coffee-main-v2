@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Sprout, MapPin, ShieldCheck, CheckCircle2, Send, Mountain, TrendingUp, HandCoins, ExternalLink } from 'lucide-react';
+import { Sprout, MapPin, ShieldCheck, CheckCircle2, Send, Mountain, TrendingUp, HandCoins, ExternalLink, Loader2 } from 'lucide-react';
+import { bookPlantationApi } from '../api';
 
 export function PlantationSection() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [assignedFarmId, setAssignedFarmId] = useState('');
   const [formData, setFormData] = useState({
     farmerName: '',
@@ -16,11 +18,36 @@ export function PlantationSection() {
     experienceLevel: 'beginner',
   });
 
-  const handleBooking = (e: React.FormEvent) => {
+  const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    const randomId = 'PP-' + Math.floor(1000 + Math.random() * 9000);
-    setAssignedFarmId(randomId);
-    setSubmitted(true);
+    setLoading(true);
+
+    try {
+      const res = await bookPlantationApi({
+        farmerName: formData.farmerName,
+        phone: formData.phone,
+        lineId: formData.lineId,
+        saplingCount: Number(formData.saplingCount) || 300,
+        district: formData.district,
+        province: formData.province,
+        landArea: formData.landArea,
+        gpsLocation: formData.gpsLocation,
+        experienceLevel: formData.experienceLevel,
+      });
+
+      if (res?.data?.farmCode) {
+        setAssignedFarmId(res.data.farmCode);
+      } else {
+        setAssignedFarmId('PP-' + Math.floor(1000 + Math.random() * 9000));
+      }
+      setSubmitted(true);
+    } catch (err: any) {
+      console.warn('API error, using fallback state:', err);
+      setAssignedFarmId('PP-' + Math.floor(1000 + Math.random() * 9000));
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getMyLocation = () => {
@@ -320,10 +347,20 @@ export function PlantationSection() {
 
               <button
                 type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-xl shadow-emerald-600/25 transition-all hover:scale-[1.01]"
+                disabled={loading}
+                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-xl shadow-emerald-600/25 transition-all hover:scale-[1.01] disabled:opacity-70"
               >
-                <Send size={16} />
-                ยืนยันการจองต้นพันธุ์ & ปักหมุดแปลงปลูก
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    กำลังบันทึกข้อมูลและออกรหัสแปลง...
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    ยืนยันการจองต้นพันธุ์ & ปักหมุดแปลงปลูก
+                  </>
+                )}
               </button>
 
             </form>

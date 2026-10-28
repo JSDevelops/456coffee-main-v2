@@ -14,6 +14,8 @@ import {
   X,
   Tag,
   Bell,
+  GraduationCap,
+  Sprout,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -30,7 +32,9 @@ export type Page =
   | 'channels'
   | 'settings'
   | 'profile'
-  | 'announcements';
+  | 'announcements'
+  | 'academy'
+  | 'plantations';
 
 interface NavGroup {
   label: string;
@@ -41,6 +45,13 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
     items: [{ id: 'overview', icon: <BarChart3 size={18} />, label: 'แดชบอร์ด' }],
+  },
+  {
+    label: 'Ecosystem & Academy',
+    items: [
+      { id: 'academy',     icon: <GraduationCap size={18} />, label: '456 Academy' },
+      { id: 'plantations', icon: <Sprout size={18} />,        label: 'เครือข่ายแปลงปลูก' },
+    ],
   },
   {
     label: 'Operations',

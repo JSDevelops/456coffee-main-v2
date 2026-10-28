@@ -622,3 +622,75 @@ model Announcement {
   @@index([targetBranches])
   @@index([targetAudience])
 }
+
+// ════════════════════════════════════════════════════════════
+// 456 Coffee Ecosystem: Academy, Plantation & Location Hub
+// ════════════════════════════════════════════════════════════
+
+model AcademyEnrollment {
+  id            String   @id @default(uuid())
+  studentName   String
+  phone         String
+  lineId        String?
+  courseTrack   String   @default("COMPLETE_SOLUTION") // BARISTA_PRO | CAFE_MANAGEMENT | COMPLETE_SOLUTION
+  planStatus    String?  // ready_location | planning | skill_upgrade | curious
+  preferredDate String?
+  notes         String?  @db.Text
+  status        String   @default("PENDING") // PENDING | CONTACTED | CONFIRMED | PAID | COMPLETED | CANCELLED
+  batchNo       Int?
+  adminNotes    String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([phone])
+  @@index([status])
+  @@index([courseTrack])
+}
+
+model PlantationBooking {
+  id            String   @id @default(uuid())
+  farmCode      String   @unique // e.g. PP-4821
+  farmerName    String
+  phone         String
+  lineId        String?
+  saplingCount  Int      @default(300)
+  landArea      String?  // e.g. "1 ไร่"
+  subdistrict   String?
+  district      String
+  province      String   @default("กาฬสินธุ์")
+  latitude      Float?
+  longitude     Float?
+  gpsRaw        String?
+  status        String   @default("BOOKED") // BOOKED | CONTACTED | SCHEDULED | DELIVERED | PLANTED | CANCELLED
+  isPublicOnMap Boolean  @default(false)
+  adminNotes    String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([phone])
+  @@index([status])
+  @@index([farmCode])
+}
+
+model EcosystemLocation {
+  id              String   @id @default(uuid())
+  type            String   // CAFE | PLANTATION | ACADEMY | PARTNER
+  name            String
+  badge           String?
+  district        String
+  province        String   @default("กาฬสินธุ์")
+  latitude        Float
+  longitude       Float
+  hoursOrCapacity String?
+  phone           String?
+  details         String?  @db.Text
+  stats           String?
+  actionText      String?
+  actionHref      String?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type, isActive])
+}

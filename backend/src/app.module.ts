@@ -19,6 +19,7 @@ import { PaymentBridgeController } from './payment-bridge.controller';
 import { PromotionController } from './promotion.controller';
 import { HrController } from './hr.controller';
 import { AnnouncementController } from './announcement.controller';
+import { EcosystemController } from './ecosystem.controller';
 
 import { PrismaService } from './prisma.service';
 import { OrderService } from './order.service';
@@ -40,6 +41,7 @@ import { PaymentBridgeService } from './payment-bridge.service';
 import { PromotionService } from './promotion.service';
 import { HrService } from './hr.service';
 import { AnnouncementService } from './announcement.service';
+import { EcosystemService } from './ecosystem.service';
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
@@ -82,6 +84,7 @@ export { JwtAuthGuard, RolesGuard };
     PromotionController,
     HrController,
     AnnouncementController,
+    EcosystemController,
   ],
   providers: [
     PrismaService,
@@ -103,6 +106,7 @@ export { JwtAuthGuard, RolesGuard };
     PromotionService,
     HrService,
     AnnouncementService,
+    EcosystemService,
     // JWT/role guards are NOT applied globally — opt-in per controller while
     // frontends migrate to sending Bearer tokens.
     JwtAuthGuard,
