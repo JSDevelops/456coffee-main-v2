@@ -48,9 +48,14 @@ async function request<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (res.status === 401) {
-    auth.clear();
-    // Reload to bounce back to login screen
-    window.location.reload();
+    if (!path.startsWith('/auth/')) {
+      const isDemo = auth.getToken() === 'demo-admin-token';
+      if (!isDemo) {
+        auth.clear();
+        // Reload to bounce back to login screen
+        window.location.reload();
+      }
+    }
   }
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);

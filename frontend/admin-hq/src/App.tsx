@@ -39,7 +39,8 @@ const VALID_PAGES: Page[] = [
 ];
 
 function readPageFromHash(): Page {
-  const raw = window.location.hash.replace(/^#\/?/, '') as Page;
+  const hashWithoutPrefix = window.location.hash.replace(/^#\/?/, '');
+  const raw = hashWithoutPrefix.split('?')[0].replace(/\/+$/, '') as Page;
   return VALID_PAGES.includes(raw) ? raw : 'overview';
 }
 
@@ -62,22 +63,34 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  // Check URL query/hash for token (supports seamless cross-domain session transfer)
+  // Check URL query/hash for token or demo (supports seamless cross-domain session transfer)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
     const hashParams = hash.includes('?')
       ? new URLSearchParams(hash.split('?')[1])
-      : hash.includes('token=')
+      : hash.includes('token=') || hash.includes('demo=')
       ? new URLSearchParams(hash.replace(/^#\/?/, ''))
       : null;
+
+    const isDemo = urlParams.get('demo') === 'true' || hashParams?.get('demo') === 'true';
+    if (isDemo) {
+      auth.setToken('demo-admin-token');
+      setAuthed(true);
+      const target = readPageFromHash();
+      setPageState(target);
+      return;
+    }
+
     const token = urlParams.get('token') || hashParams?.get('token');
     if (token) {
       auth.setToken(token);
       setAuthed(true);
-      const cleanUrl = window.location.pathname + '#/orders';
+      const targetPage = readPageFromHash();
+      const targetHash = targetPage !== 'overview' ? `#/${targetPage}` : '#/overview';
+      const cleanUrl = window.location.pathname + targetHash;
       window.history.replaceState({}, document.title, cleanUrl);
-      setPageState('orders');
+      setPageState(targetPage !== 'overview' ? targetPage : 'orders');
     }
   }, []);
 

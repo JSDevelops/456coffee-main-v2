@@ -160,7 +160,44 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   />
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  auth.setToken('demo-admin-token');
+                  onLoginSuccess();
+                }}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#d5a068] bg-[#fffbf2] text-sm font-black text-[#965a25] transition hover:bg-[#faebd7] active:scale-[0.985]"
+              >
+                <span>⚡ เข้าดูเดโมระบบ Super Admin (ไม่ต้องใช้รหัส)</span>
+              </button>
             </form>
+
+            <div className="mt-6 border-t border-[#ebdfcc] pt-5">
+              <p className="text-xs font-bold text-[#8a7662] mb-2.5">
+                💡 บุคคลทั่วไปที่สนใจเรียนหรือจองต้นพันธุ์ (ไม่ต้องล็อกอิน):
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <a
+                  href="https://coffee-cafe.shop/#academy"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#f5ede0] hover:bg-[#ebdcc8] text-[#6d461f] font-bold transition-colors"
+                >
+                  ☕ หลักสูตร Academy
+                </a>
+                <a
+                  href="https://coffee-cafe.shop/#plantations"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#e6f3ee] hover:bg-[#d0e8dd] text-[#1f5c49] font-bold transition-colors"
+                >
+                  🌱 จองต้นพันธุ์กาแฟ
+                </a>
+                <a
+                  href="https://coffee-cafe.shop/#map"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#edf1f7] hover:bg-[#dbe4f1] text-[#2c4d75] font-bold transition-colors"
+                >
+                  📍 แผนที่ปักหมุด
+                </a>
+              </div>
+            </div>
           </div>
         </motion.div>
 
