@@ -16,26 +16,14 @@ import {
   Phone,
   ArrowRight,
   Sparkles,
-  Info
+  Info,
+  Navigation,
+  Copy,
+  Check
 } from 'lucide-react';
 import './CoffeeHubHomepage.css';
 
 // Types
-type FilterCategory = 'all' | 'cafe' | 'plantation' | 'academy';
-
-interface LocationCardData {
-  id: string;
-  type: 'cafe' | 'plantation' | 'academy';
-  name: string;
-  badge?: string;
-  location: string;
-  hours: string;
-  phone?: string;
-  imageUrl: string;
-  description: string;
-  isFlagship?: boolean;
-}
-
 interface NewsItemData {
   id: string;
   title: string;
@@ -48,48 +36,33 @@ interface NewsItemData {
 export default function CoffeeHubHomepage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
-  const [selectedLocation, setSelectedLocation] = useState<LocationCardData | null>(null);
+  const [copiedCoordinates, setCopiedCoordinates] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
 
-  // Real verified business data
-  const locations: LocationCardData[] = [
-    {
-      id: 'loc-1',
-      type: 'cafe',
-      name: '456 Coffee สาขาหลัก',
-      badge: 'Flagship Store',
-      location: 'อำเภอเมืองกาฬสินธุ์',
-      hours: '08:30 - 16:30 น. (เปิดทุกวัน)',
-      phone: '061-305-5625',
-      imageUrl: '/cafe-main.jpg',
-      description: 'คาเฟ่เรือนไม้ 2 ชั้น บาร์กาแฟโรบัสต้าภูพานคั่วสด Slow bar และพื้นที่แลกเปลี่ยนคนรักกาแฟ',
-      isFlagship: true,
-    },
-    {
-      id: 'loc-2',
-      type: 'plantation',
-      name: 'แปลงวิจัยสายพันธุ์กาแฟภูพาน 456',
-      badge: 'ต้นน้ำกาแฟ',
-      location: 'เทือกเขาภูพาน อำเภอสมเด็จ จังหวัดกาฬสินธุ์',
-      hours: '09:00 - 16:00 น. (กรุณานัดหมายล่วงหน้า)',
-      phone: '061-305-5625',
-      imageUrl: 'https://images.unsplash.com/photo-1524350876685-274059332603?q=80&w=800&auto=format&fit=crop',
-      description: 'แหล่งปลูกกาแฟโรบัสต้าคัดสรรภายใต้ร่มเงาป่าธรรมชาติ แหล่งศึกษาดูงานต้นน้ำและกระจายต้นกล้าพันธุ์แท้',
-    },
-    {
-      id: 'loc-3',
-      type: 'academy',
-      name: '456 Coffee Academy กาฬสินธุ์',
-      badge: 'ศูนย์อบรมมาตรฐาน',
-      location: 'อำเภอเมืองกาฬสินธุ์',
-      hours: 'เปิดรับลงทะเบียนตามรอบอบรม',
-      phone: '061-305-5625',
-      imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800&auto=format&fit=crop',
-      description: 'หลักสูตร Barista Professional, Sensory และบริหารธุรกิจร้านกาแฟแบบครบวงจรจากผู้เชี่ยวชาญ',
-    },
-  ];
+  // Real verified business data of 456 Coffee Flagship (Only verified real location)
+  const realStore = {
+    name: '456 Coffee สาขาหลัก',
+    englishName: '456 Coffee Flagship Store & Roastery',
+    badge: 'ร้านจริง · สาขาหลัก',
+    tagline: 'Flagship Cafe & Roastery',
+    address: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ ถนนทางหลวง 213 ต.กาฬสินธุ์ อ.เมือง จ.กาฬสินธุ์ 46000',
+    shortAddress: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ (ถ.ทางหลวง 213)',
+    coordinates: '16.43444, 103.50428',
+    hours: '08:30 - 16:30 น. (เปิดให้บริการทุกวัน)',
+    phone: '061-305-5625',
+    imageUrl: '/cafe-main.jpg',
+    description: 'คาเฟ่เรือนไม้ 2 ชั้น บรรยากาศร่มรื่น โปร่งสบาย เสิร์ฟกาแฟโรบัสต้าภูพานคั่วสด เมนู Specialty Coffee, Slow bar บาริสต้ามืออาชีพ มีมุมทำงานพร้อม Wi-Fi และที่จอดรถสะดวกสบาย',
+    googleMapsDirectionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=16.43444,103.50428',
+    googleMapsSearchUrl: 'https://maps.google.com/?q=16.43444,103.50428',
+    embedMapUrl: 'https://maps.google.com/maps?q=16.43444,103.50428&hl=th&z=16&output=embed'
+  };
+
+  const copyCoordinates = () => {
+    navigator.clipboard.writeText(realStore.coordinates);
+    setCopiedCoordinates(true);
+    setTimeout(() => setCopiedCoordinates(false), 2500);
+  };
 
   // News items matching reference images
   const newsList: NewsItemData[] = [
@@ -118,19 +91,6 @@ export default function CoffeeHubHomepage() {
       imageUrl: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=800&auto=format&fit=crop',
     },
   ];
-
-  // Search filtering logic
-  const filteredLocations = useMemo(() => {
-    return locations.filter((loc) => {
-      const matchType = activeFilter === 'all' || loc.type === activeFilter;
-      const matchQuery =
-        !searchQuery.trim() ||
-        loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        loc.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        loc.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchType && matchQuery;
-    });
-  }, [locations, activeFilter, searchQuery]);
 
   const filteredNews = useMemo(() => {
     return newsList.filter((n) => {
@@ -211,10 +171,9 @@ export default function CoffeeHubHomepage() {
             </a>
             <a
               href="#ch-network-map"
-              onClick={() => setActiveFilter('cafe')}
               className="text-[#C5B3A1] hover:text-white transition-colors"
             >
-              ร้านกาแฟ
+              ร้าน 456 Coffee
             </a>
             <a
               href="#pathway-academy"
@@ -293,13 +252,10 @@ export default function CoffeeHubHomepage() {
             </a>
             <a
               href="#ch-network-map"
-              onClick={() => {
-                setActiveFilter('cafe');
-                setMobileMenuOpen(false);
-              }}
+              onClick={() => setMobileMenuOpen(false)}
               className="block px-4 py-2.5 rounded-xl font-medium text-[#D8C7B6] hover:bg-white/5 text-base"
             >
-              ร้านกาแฟ
+              ร้าน 456 Coffee
             </a>
             <a
               href="#pathway-academy"
@@ -453,8 +409,7 @@ export default function CoffeeHubHomepage() {
           <div
             id="pathway-plantation"
             onClick={() => {
-              setActiveFilter('plantation');
-              const el = document.getElementById('ch-network-map');
+              const el = document.getElementById('ch-news-section');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
             className="ch-pathway-plantation ch-card p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer group"
@@ -487,18 +442,17 @@ export default function CoffeeHubHomepage() {
             </div>
           </div>
 
-          {/* Pathway 2: คาเฟ่ · ร้านกาแฟ */}
+          {/* Pathway 2: คาเฟ่ · ร้านกาแฟ 456 Coffee */}
           <div
             id="pathway-cafe"
             onClick={() => {
-              setActiveFilter('cafe');
               const el = document.getElementById('ch-network-map');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
             className="ch-pathway-cafe ch-card p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer group"
             role="button"
             tabIndex={0}
-            aria-label="คาเฟ่ · ร้านกาแฟ"
+            aria-label="คาเฟ่ · ร้านกาแฟ 456 Coffee"
           >
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2">
@@ -506,18 +460,18 @@ export default function CoffeeHubHomepage() {
                   <Coffee className="w-4 h-4" />
                 </div>
                 <h2 className="text-white font-bold text-base sm:text-lg group-hover:text-orange-300 transition-colors">
-                  คาเฟ่ · ร้านกาแฟ
+                  คาเฟ่ · ร้านกาแฟ 456 Coffee
                 </h2>
               </div>
               <p className="text-xs sm:text-sm text-[#CDB7A3] font-normal line-clamp-1">
-                ค้นหาร้านกาแฟทั่วไทย
+                สาขาหลัก อำเภอเมืองกาฬสินธุ์
               </p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-16 h-16 sm:w-20 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-orange-500/30">
                 <img
-                  src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400&auto=format&fit=crop"
-                  alt="แก้วกาแฟลาเต้อาร์ตในคาเฟ่"
+                  src="/cafe-main.jpg"
+                  alt="456 Coffee สาขาหลัก กาฬสินธุ์"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
@@ -528,11 +482,7 @@ export default function CoffeeHubHomepage() {
           {/* Pathway 3: Coffee Academy */}
           <div
             id="pathway-academy"
-            onClick={() => {
-              setActiveFilter('academy');
-              const el = document.getElementById('ch-network-map');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => setJoinModalOpen(true)}
             className="ch-pathway-academy ch-card p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer group"
             role="button"
             tabIndex={0}
@@ -567,178 +517,220 @@ export default function CoffeeHubHomepage() {
       </section>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 5. COFFEE NETWORK MAP & LOCATIONS SECTION */}
+      {/* 5. 456 COFFEE STORE REAL LOCATION & MAP SECTION */}
       {/* ────────────────────────────────────────────────────────── */}
       <section id="ch-network-map" className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-7xl mx-auto">
-        <div className="ch-card p-5 sm:p-7 space-y-6">
+        <div className="ch-card p-5 sm:p-7 space-y-6 border border-orange-500/25">
           
-          {/* Section Header with Title and Link */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Section Header with Real Store Title & Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-orange-600/20 text-[#EA580C] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-orange-600/20 text-[#EA580C] flex items-center justify-center">
                 <MapPin className="w-5 h-5 text-[#EA580C]" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  แผนที่เครือข่ายกาแฟ
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                    แผนที่และตำแหน่งร้าน 456 Coffee
+                  </h2>
+                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    ตำแหน่งร้านจริง
+                  </span>
+                </div>
                 <p className="text-xs text-[#A89887]">
-                  ค้นหาจุดเชื่อมโยง 456 Coffee สาขา แหล่งปลูก และสถาบันอบรม
+                  สาขาหลัก อำเภอเมืองกาฬสินธุ์ (ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ ถนนทางหลวง 213)
                 </p>
               </div>
             </div>
 
-            {/* Filter Buttons */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveFilter('all')}
-                className={`ch-filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
-              >
-                ทั้งหมด
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter('cafe')}
-                className={`ch-filter-btn ${activeFilter === 'cafe' ? 'active' : ''}`}
-              >
-                ร้านกาแฟ
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter('plantation')}
-                className={`ch-filter-btn ${activeFilter === 'plantation' ? 'active' : ''}`}
-              >
-                พื้นที่ปลูก
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter('academy')}
-                className={`ch-filter-btn ${activeFilter === 'academy' ? 'active' : ''}`}
-              >
-                หลักสูตร
-              </button>
-
+            {/* Direct Google Maps Action Buttons */}
+            <div className="flex items-center gap-2">
               <a
-                href="#ch-network-map"
-                onClick={() => setActiveFilter('all')}
-                className="hidden sm:inline-flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 font-semibold ml-2"
+                href={realStore.googleMapsDirectionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#EA580C] text-white hover:bg-[#D94E07] shadow-md shadow-orange-950/40 transition-all"
               >
-                ดูแผนที่ทั้งหมด <ChevronRight className="w-4 h-4" />
+                <Navigation className="w-3.5 h-3.5" />
+                <span>นำทางด้วย Google Maps</span>
               </a>
+
+              <button
+                type="button"
+                onClick={copyCoordinates}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-white/5 text-[#D8C7B6] border border-white/10 hover:bg-white/10 hover:text-white transition-all"
+                title="คัดลอกพิกัด GPS"
+              >
+                {copiedCoordinates ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 font-semibold">คัดลอกแล้ว</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">คัดลอกพิกัด</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
-          {/* Map & Location Card Container (2-Column Desktop, Stacked Mobile) */}
+          {/* Map & Real Location Card Container (2-Column Desktop, Stacked Mobile) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             
-            {/* Column 1: Interactive Google Maps Frame */}
-            <div className="lg:col-span-7 ch-map-frame h-[300px] sm:h-[380px] lg:h-[420px] bg-[#1a0f07] relative">
+            {/* Column 1: Interactive Google Maps Frame (pinned on exact GPS) */}
+            <div className="lg:col-span-7 ch-map-frame h-[320px] sm:h-[400px] lg:h-[460px] bg-[#1a0f07] relative rounded-2xl overflow-hidden border border-white/10">
               <iframe
                 title="Google Maps - 456 Coffee สาขาหลัก กาฬสินธุ์"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3826.305607062402!2d103.50428487588147!3d16.434444584299865!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x313d0fc70b804567%3A0xb35fa3cae1870198!2z4LiB4Liy4Lis4Lix4LiZ4Liq4Li04LiZ4LiX4Li44LmM!5e0!3m2!1sth!2sth!4v1714000000000!5m2!1sth!2sth"
-                className="w-full h-full border-0 filter contrast-[1.05] brightness-[0.92]"
+                src={realStore.embedMapUrl}
+                className="w-full h-full border-0 filter contrast-[1.05] brightness-[0.95]"
                 allowFullScreen={false}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
 
               {/* Map Floating Pin Overlay Indicator */}
-              <div className="absolute top-4 left-4 bg-[#140A04]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2 shadow-lg text-xs pointer-events-none">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
-                <span className="text-white font-medium">อำเภอเมืองกาฬสินธุ์ (ทางหลวง 213)</span>
+              <div className="absolute top-4 left-4 bg-[#140A04]/90 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10 flex items-center gap-2.5 shadow-xl text-xs pointer-events-none">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500" />
+                </span>
+                <div className="leading-tight">
+                  <div className="text-white font-bold">456 Coffee สาขาหลัก</div>
+                  <div className="text-[10px] text-[#A89887]">หน้าศูนย์ราชการ จ.กาฬสินธุ์</div>
+                </div>
               </div>
+
+              {/* Floating Bottom Link */}
+              <a
+                href={realStore.googleMapsDirectionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-4 right-4 bg-[#140A04]/90 hover:bg-[#EA580C] hover:text-white backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-[#D8C7B6] flex items-center gap-1.5 shadow-lg transition-all"
+              >
+                <span>เปิดแผนที่ใหญ่</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
 
-            {/* Column 2: Location Recommendation Cards List */}
-            <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
-              <div className="space-y-3 ch-no-scrollbar max-h-[420px] overflow-y-auto pr-1">
-                {filteredLocations.length > 0 ? (
-                  filteredLocations.map((loc) => (
-                    <div
-                      key={loc.id}
-                      onClick={() => setSelectedLocation(loc)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-                        loc.isFlagship
-                          ? 'bg-[#23140A] border-orange-500/40 hover:border-orange-500'
-                          : 'bg-[#180E07] border-white/10 hover:border-white/25'
-                      }`}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <div className="flex gap-4 items-center">
-                        {/* Real Photo Thumbnail */}
-                        <div className="w-24 h-24 sm:w-28 sm:h-24 rounded-xl overflow-hidden shrink-0 border border-white/10 relative bg-black/40">
-                          <img
-                            src={loc.imageUrl}
-                            alt={loc.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback if image fails
-                              (e.target as HTMLImageElement).src =
-                                'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400&auto=format&fit=crop';
-                            }}
-                          />
-                          {loc.badge && (
-                            <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EA580C] text-white">
-                              {loc.badge}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Details */}
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <h3 className="text-white font-bold text-base sm:text-lg truncate">
-                            {loc.name}
-                          </h3>
-                          <div className="flex items-center gap-1.5 text-xs text-[#D8C7B6]">
-                            <MapPin className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-                            <span className="truncate">{loc.location}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-[#A89887]">
-                            <Clock className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-                            <span className="truncate">{loc.hours}</span>
-                          </div>
-                        </div>
-
-                        <ChevronRight className="w-5 h-5 text-orange-400 shrink-0" />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center rounded-2xl bg-[#1A0E07] border border-white/10 space-y-2">
-                    <Info className="w-8 h-8 text-[#A89887] mx-auto" />
-                    <p className="text-white font-medium">ไม่พบผลลัพธ์ที่ตรงกับการค้นหา</p>
-                    <p className="text-xs text-[#A89887]">
-                      ลองเปลี่ยนคำค้นหา หรือเลือกตัวกรองเป็น "ทั้งหมด"
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setActiveFilter('all');
-                      }}
-                      className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-orange-600 text-white mt-2"
-                    >
-                      ล้างตัวกรอง
-                    </button>
+            {/* Column 2: Exclusive Real Store Card */}
+            <div className="lg:col-span-5 flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-[#1C0F08] border border-orange-500/30 shadow-xl space-y-4">
+              
+              <div className="space-y-4">
+                {/* Real Photo with Tag */}
+                <div className="aspect-[16/10] w-full rounded-xl overflow-hidden border border-white/15 relative bg-black/50 group">
+                  <img
+                    src={realStore.imageUrl}
+                    alt={realStore.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                  
+                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold bg-[#EA580C] text-white shadow-md">
+                    {realStore.tagline}
+                  </span>
+                  
+                  <div className="absolute bottom-3 left-3 right-3 text-white">
+                    <p className="text-xs text-orange-300 font-medium">ภาพถ่ายร้านจริง</p>
+                    <h3 className="text-base sm:text-lg font-extrabold drop-shadow">
+                      {realStore.name}
+                    </h3>
                   </div>
-                )}
+                </div>
+
+                {/* Details List */}
+                <div className="space-y-2.5 text-xs text-[#D8C7B6]">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-white font-semibold">ที่ตั้งร้าน:</span>{' '}
+                      <span>{realStore.address}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5">
+                    <Clock className="w-4 h-4 text-orange-400 shrink-0" />
+                    <div>
+                      <span className="text-white font-semibold">เวลาทำการ:</span>{' '}
+                      <span className="text-emerald-400 font-medium">{realStore.hours}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5">
+                    <Phone className="w-4 h-4 text-orange-400 shrink-0" />
+                    <div>
+                      <span className="text-white font-semibold">โทรศัพท์:</span>{' '}
+                      <a href={`tel:${realStore.phone.replace(/-/g, '')}`} className="text-white hover:text-orange-300 font-bold underline decoration-orange-500/50">
+                        {realStore.phone}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Store Description */}
+                <p className="text-xs text-[#A89887] leading-relaxed pt-1 border-t border-white/5">
+                  {realStore.description}
+                </p>
+
+                {/* Store Highlights Tags */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
+                    ☕ Specialty Coffee & Slow bar
+                  </span>
+                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
+                    🌿 กาแฟโรบัสต้าภูพานคั่วสด
+                  </span>
+                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
+                    🚗 มีที่จอดรถสะดวกสบาย
+                  </span>
+                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
+                    📶 มี Wi-Fi & ปลั๊กไฟ
+                  </span>
+                </div>
               </div>
 
-              {/* Direct Call / Contact action button */}
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs text-[#D8C7B6]">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-orange-400" />
-                  <span>โทรสอบถามข้อมูลสาขาหลัก:</span>
+              {/* Action Buttons */}
+              <div className="pt-2 space-y-2">
+                <a
+                  href={realStore.googleMapsDirectionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white bg-[#EA580C] hover:bg-[#D94E07] shadow-lg shadow-orange-950/40 flex items-center justify-center gap-2 transition-all"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>เริ่มนำทางด้วย Google Maps</span>
+                </a>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <a
-                    href="tel:0613055625"
-                    className="text-white font-bold hover:text-orange-300"
+                    href={`tel:${realStore.phone.replace(/-/g, '')}`}
+                    className="py-2.5 px-3 rounded-xl font-semibold text-white bg-white/10 hover:bg-white/15 flex items-center justify-center gap-1.5 transition-all"
                   >
-                    061-305-5625
+                    <Phone className="w-3.5 h-3.5 text-orange-400" />
+                    <span>โทรติดต่อร้าน</span>
                   </a>
+
+                  <button
+                    type="button"
+                    onClick={copyCoordinates}
+                    className="py-2.5 px-3 rounded-xl font-semibold text-[#D8C7B6] bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    {copiedCoordinates ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">คัดลอกสำเร็จ!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-orange-400" />
+                        <span>คัดลอกพิกัด</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-                <span className="hidden sm:inline text-[11px] text-[#8E7E6E]">เปิดให้บริการทุกวัน</span>
               </div>
+
             </div>
 
           </div>
@@ -949,76 +941,6 @@ export default function CoffeeHubHomepage() {
             <p className="text-[11px] text-center text-[#8A7969]">
               456 Coffee สาขาหลัก อำเภอเมืองกาฬสินธุ์
             </p>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* MODAL: LOCATION DETAIL */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {selectedLocation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#180D06] border border-orange-500/30 rounded-2xl max-w-lg w-full p-6 space-y-4 text-white shadow-2xl relative">
-            <button
-              onClick={() => setSelectedLocation(null)}
-              className="absolute top-4 right-4 p-1 rounded-full text-[#A89887] hover:text-white hover:bg-white/10"
-              aria-label="ปิดหน้าต่าง"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="aspect-[16/9] rounded-xl overflow-hidden border border-white/10">
-              <img
-                src={selectedLocation.imageUrl}
-                alt={selectedLocation.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 text-xs font-bold bg-orange-600 rounded text-white">
-                  {selectedLocation.badge || 'สถานที่'}
-                </span>
-                <h3 className="text-lg font-bold text-white">{selectedLocation.name}</h3>
-              </div>
-              <p className="text-xs text-[#D8C7B6] leading-relaxed">
-                {selectedLocation.description}
-              </p>
-              <div className="pt-2 space-y-1 text-xs text-[#A89887]">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-orange-400 shrink-0" />
-                  <span>{selectedLocation.location}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-400 shrink-0" />
-                  <span>{selectedLocation.hours}</span>
-                </div>
-                {selectedLocation.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-orange-400 shrink-0" />
-                    <span>โทรติดต่อ: {selectedLocation.phone}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-3 flex gap-3">
-              {selectedLocation.phone && (
-                <a
-                  href={`tel:${selectedLocation.phone}`}
-                  className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-center font-bold text-sm text-white"
-                >
-                  โทรติดต่อทันที
-                </a>
-              )}
-              <button
-                onClick={() => setSelectedLocation(null)}
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm font-semibold text-white"
-              >
-                ปิด
-              </button>
-            </div>
           </div>
         </div>
       )}
