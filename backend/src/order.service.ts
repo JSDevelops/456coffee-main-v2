@@ -204,6 +204,15 @@ export class OrderService {
 
       if (initialPaymentStatus === 'PAID') {
         await this.recordPaidOrderSideEffects(order);
+        // Immediate in-store cash sale deduction
+        try {
+          const result = await this.inventory.deductInventoryForOrder(order.id);
+          if (!result.alreadyDeducted && result.lowStockAlerts) {
+            this.gateway.notifyInventoryAlert(branchId, result.lowStockAlerts);
+          }
+        } catch (e: unknown) {
+          console.warn(`Initial inventory deduction failed for ${order.id}:`, e);
+        }
       }
 
       // Notify Branch Real-time
