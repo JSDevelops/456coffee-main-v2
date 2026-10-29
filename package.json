@@ -10,7 +10,8 @@
     "dev:pos": "npm --prefix frontend/branch-pos run dev",
     "dev:liff": "npm --prefix frontend/buyer-liff run dev",
     "dev:translator": "npm --prefix frontend/translator run dev",
-    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend/admin-hq install && npm --prefix frontend/branch-pos install && npm --prefix frontend/buyer-liff install && npm --prefix frontend/translator install",
+    "dev:landing": "npm --prefix frontend/landing-page run dev",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend/admin-hq install && npm --prefix frontend/branch-pos install && npm --prefix frontend/buyer-liff install && npm --prefix frontend/translator install && npm --prefix frontend/landing-page install",
     "build:api": "npm --prefix backend run build",
     "test:api": "npm --prefix backend test",
     "db:backup": "./scripts/backup-db.sh"

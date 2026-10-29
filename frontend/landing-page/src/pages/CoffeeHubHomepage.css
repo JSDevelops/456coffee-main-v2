@@ -1,0 +1,162 @@
+/* 456 COFFEE HUB - Scoped Stylesheet */
+
+.ch-page-wrapper {
+  background-color: #120904;
+  background-image: 
+    radial-gradient(circle at 80% 10%, rgba(234, 88, 12, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 15% 45%, rgba(16, 185, 129, 0.06) 0%, transparent 35%),
+    radial-gradient(circle at 85% 75%, rgba(217, 119, 6, 0.08) 0%, transparent 40%),
+    linear-gradient(180deg, #160B05 0%, #100602 50%, #0A0401 100%);
+  color: #F5EBE0;
+  font-family: 'Prompt', 'Sarabun', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Glassmorphism & Card Gradients */
+.ch-card {
+  background: rgba(26, 15, 8, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 18px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ch-card:hover {
+  border-color: rgba(234, 88, 12, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7), 0 0 20px -5px rgba(234, 88, 12, 0.15);
+}
+
+/* Pathway 1: Plantation Card */
+.ch-pathway-plantation {
+  background: linear-gradient(135deg, rgba(16, 42, 24, 0.85) 0%, rgba(13, 27, 18, 0.95) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.ch-pathway-plantation:hover {
+  border-color: rgba(74, 222, 128, 0.6);
+  box-shadow: 0 12px 28px -8px rgba(5, 150, 105, 0.3);
+}
+
+/* Pathway 2: Cafe Card */
+.ch-pathway-cafe {
+  background: linear-gradient(135deg, rgba(46, 25, 14, 0.85) 0%, rgba(28, 15, 8, 0.95) 100%);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+}
+
+.ch-pathway-cafe:hover {
+  border-color: rgba(249, 115, 22, 0.6);
+  box-shadow: 0 12px 28px -8px rgba(234, 88, 12, 0.3);
+}
+
+/* Pathway 3: Academy Card */
+.ch-pathway-academy {
+  background: linear-gradient(135deg, rgba(42, 28, 12, 0.85) 0%, rgba(25, 17, 7, 0.95) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.ch-pathway-academy:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 12px 28px -8px rgba(217, 119, 6, 0.3);
+}
+
+/* Hero Title Gradient */
+.ch-hero-gradient-text {
+  background: linear-gradient(92deg, #F97316 0%, #FB923C 50%, #F59E0B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Search Bar Input Container */
+.ch-search-container {
+  background: rgba(24, 13, 7, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.ch-search-container:focus-within {
+  border-color: #EA580C;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2), 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Filter Button Pills */
+.ch-filter-btn {
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(35, 19, 10, 0.6);
+  color: #D7C7B7;
+}
+
+.ch-filter-btn:hover {
+  background: rgba(234, 88, 12, 0.2);
+  color: #FFFFFF;
+  border-color: rgba(234, 88, 12, 0.4);
+}
+
+.ch-filter-btn.active {
+  background: #EA580C;
+  color: #FFFFFF;
+  border-color: #EA580C;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+/* Google AdSense Placement Banner */
+.ch-adsense-banner {
+  background-color: #ECE3D4;
+  border: 1px dashed #C8B9A6;
+  color: #7A6B59;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: 12px;
+  padding: 14px 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+/* Green Join CTA Button */
+.ch-join-btn {
+  background: linear-gradient(90deg, #059669 0%, #10B981 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
+  transition: all 0.25s ease;
+}
+
+.ch-join-btn:hover {
+  background: linear-gradient(90deg, #047857 0%, #059669 100%);
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Interactive Map Container */
+.ch-map-frame {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+/* Custom Scrollbar for list items */
+.ch-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.ch-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
