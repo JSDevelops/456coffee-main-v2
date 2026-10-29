@@ -11,20 +11,21 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState<string>(() => {
     const p = window.location.pathname.replace(/\/+$/, '') || '/';
     const h = window.location.hash.replace(/^#\/?/, '');
-    if (p === '/coffee-home' || h === 'coffee-home' || h === '/coffee-home') {
-      return '/coffee-home';
+    if (p === '/js-develop' || h === 'js-develop' || h === '/js-develop') {
+      return '/js-develop';
     }
-    return p;
+    // Default to 456 Coffee HUB for '/' and '/coffee-home'
+    return '/coffee-home';
   });
 
   useEffect(() => {
     const handleLocationChange = () => {
       const p = window.location.pathname.replace(/\/+$/, '') || '/';
       const h = window.location.hash.replace(/^#\/?/, '');
-      if (p === '/coffee-home' || h === 'coffee-home' || h === '/coffee-home') {
-        setCurrentPath('/coffee-home');
+      if (p === '/js-develop' || h === 'js-develop' || h === '/js-develop') {
+        setCurrentPath('/js-develop');
       } else {
-        setCurrentPath(p);
+        setCurrentPath('/coffee-home');
       }
     };
 
@@ -36,42 +37,42 @@ export default function App() {
     };
   }, []);
 
-  // When visiting /coffee-home or #/coffee-home, render 456 Coffee HUB
-  if (currentPath === '/coffee-home') {
-    return <CoffeeHubHomepage />;
+  // When visiting /js-develop, render the JS DEVELOP page
+  if (currentPath === '/js-develop') {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-[#231205]">
+        {/* Banner leading back to 456 Coffee HUB */}
+        <div className="bg-[#180D06] text-white px-4 py-2.5 text-xs flex items-center justify-between border-b border-white/10 z-50">
+          <div className="flex items-center gap-2 max-w-7xl mx-auto w-full justify-between">
+            <span>✨ กำลังแสดงหน้าระบบเดิม (JS DEVELOP)</span>
+            <a
+              href="/"
+              className="px-3.5 py-1 rounded-full bg-[#EA580C] hover:bg-[#D94E07] text-white font-semibold text-xs transition-all shrink-0 shadow-md"
+            >
+              &larr; กลับสู่หน้าหลัก 456 COFFEE HUB
+            </a>
+          </div>
+        </div>
+
+        <Navbar />
+        <main className="flex-grow">
+          {/* 1. Hero & Interactive Pin Map (Cafes, Plantations, Academy) */}
+          <HeroMapSection />
+
+          {/* 2. Cafe Locations Section */}
+          <CafeLocationsSection />
+
+          {/* 3. Coffee Plantation & Seedling Booking / Pinning Section */}
+          <PlantationSection />
+
+          {/* 4. 456 Coffee Academy: Barista & Cafe Business Management */}
+          <AcademySection />
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
-  // Default: Preserve the existing JS DEVELOP landing page
-  return (
-    <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-[#231205]">
-      {/* Banner leading to 456 Coffee HUB */}
-      <div className="bg-[#180D06] text-white px-4 py-2 text-xs flex items-center justify-between border-b border-white/10 z-50">
-        <div className="flex items-center gap-2 max-w-7xl mx-auto w-full justify-between">
-          <span>🌟 เปิดตัวหน้าใหม่: <strong>456 COFFEE HUB</strong> ระบบนิเวศกาแฟครบวงจร</span>
-          <a
-            href="/coffee-home"
-            className="px-3 py-1 rounded-full bg-[#EA580C] hover:bg-[#D94E07] text-white font-semibold text-[11px] transition-all shrink-0"
-          >
-            เปิดหน้า 456 Coffee HUB &rarr;
-          </a>
-        </div>
-      </div>
-
-      <Navbar />
-      <main className="flex-grow">
-        {/* 1. Hero & Interactive Pin Map (Cafes, Plantations, Academy) */}
-        <HeroMapSection />
-
-        {/* 2. Cafe Locations Section */}
-        <CafeLocationsSection />
-
-        {/* 3. Coffee Plantation & Seedling Booking / Pinning Section */}
-        <PlantationSection />
-
-        {/* 4. 456 Coffee Academy: Barista & Cafe Business Management */}
-        <AcademySection />
-      </main>
-      <Footer />
-    </div>
-  );
+  // DEFAULT FOR ROOT `/` AND `/coffee-home`: 456 COFFEE HUB HOMEPAGE!
+  return <CoffeeHubHomepage />;
 }

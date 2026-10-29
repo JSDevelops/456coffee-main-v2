@@ -250,7 +250,7 @@ export default function CoffeeHubHomepage() {
             </button>
             
             <a
-              href="/#cafes"
+              href="/js-develop"
               className="px-4 py-2 rounded-full text-sm font-semibold text-white/90 border border-white/20 hover:border-orange-500 hover:text-orange-400 bg-white/5 hover:bg-white/10 transition-all"
             >
               ระบบ JS DEVELOP
@@ -316,7 +316,7 @@ export default function CoffeeHubHomepage() {
               ข่าวสาร
             </a>
             <a
-              href="/#cafes"
+              href="/js-develop"
               onClick={() => setMobileMenuOpen(false)}
               className="block px-4 py-2.5 rounded-xl font-medium text-orange-400 hover:bg-white/5 text-base"
             >
@@ -881,7 +881,7 @@ export default function CoffeeHubHomepage() {
               <a href="#ch-network-map" className="hover:text-white transition-colors">ร้านกาแฟ</a>
               <a href="#pathway-academy" className="hover:text-white transition-colors">Academy</a>
               <a href="#ch-news-section" className="hover:text-white transition-colors">ข่าวสาร</a>
-              <a href="/#cafes" className="text-orange-400 hover:text-orange-300 font-semibold">
+              <a href="/js-develop" className="text-orange-400 hover:text-orange-300 font-semibold">
                 หน้าหลัก JS DEVELOP
               </a>
             </div>
@@ -931,14 +931,14 @@ export default function CoffeeHubHomepage() {
                 <Phone className="w-4 h-4" /> โทร 061-305-5625
               </a>
               <a
-                href="/#academy"
+                href="/js-develop#academy"
                 onClick={() => setJoinModalOpen(false)}
                 className="w-full py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 font-semibold text-center flex items-center justify-center gap-2 text-white"
               >
                 <GraduationCap className="w-4 h-4 text-amber-400" /> ลงทะเบียน 456 Academy
               </a>
               <a
-                href="/#plantations"
+                href="/js-develop#plantations"
                 onClick={() => setJoinModalOpen(false)}
                 className="w-full py-3 px-4 rounded-xl bg-emerald-950/50 border border-emerald-500/30 hover:bg-emerald-900/50 font-semibold text-center flex items-center justify-center gap-2 text-emerald-300"
               >
