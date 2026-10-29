@@ -23,6 +23,8 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://api.cafe-coffee.shop/api/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://api.cafe-coffee.shop/uploads/:path*" },
     {
       "source": "/(.*)",
       "destination": "/index.html"

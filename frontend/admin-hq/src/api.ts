@@ -7,7 +7,12 @@ const defaultApi = typeof window !== 'undefined' && window.location.hostname !==
   ? ''
   : 'http://localhost:5001';
 
+const defaultSocket = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? 'https://api.cafe-coffee.shop'
+  : 'http://localhost:5001';
+
 export const API_BASE = `${import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : defaultApi}/api`;
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || defaultSocket;
 
 const TOKEN_KEY = 'admin.authToken';
 

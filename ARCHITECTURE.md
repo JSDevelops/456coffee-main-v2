@@ -51,10 +51,11 @@
 - Order history & tracking
 - Customer authentication
 
-**Translator** (`frontend/translator`)
-- Language translation service
-- UI text management
-- Multi-language support
+**Landing Page & Coffee HUB** (`frontend/landing-page`)
+- 456 Coffee Flagship Store & Coffee HUB
+- Single Verified Real Location with Google Maps directions
+- Coffee Ecosystem & Academy information
+- Community News & Knowledge articles
 
 ---
 
@@ -62,17 +63,17 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Client Layer                               │
+│                        Client Layer                             │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                    │
+│                                                                 │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────┐  ┌───────────┐ │
-│  │  Admin HQ   │  │ Branch POS   │  │Buyer LIFF│  │Translator │ │
-│  │  Dashboard  │  │              │  │ (LINE)   │  │  Service  │ │
+│  │  Admin HQ   │  │  Branch POS  │  │Buyer LIFF│  │LandingPage│ │
+│  │  Dashboard  │  │  (Cashier)   │  │ (LINE)   │  │Coffee HUB │ │
 │  └──────┬──────┘  └──────┬───────┘  └─────┬────┘  └─────┬─────┘ │
-│         │                │                │             │         │
-│         └────────────────┼────────────────┴─────────────┘         │
-│                          │                                         │
-└──────────────────────────┼─────────────────────────────────────────┘
+│         │                │                │             │       │
+│         └────────────────┼────────────────┴─────────────┘       │
+│                          │                                      │
+└──────────────────────────┼──────────────────────────────────────┘
                            │
                     WebSocket (Socket.io)
                   & HTTP (REST API)
@@ -385,20 +386,17 @@ QueueMonitorView - Queue status display
 - Payment gateway
 - Real-time order updates
 
-#### Translator Service
+#### Landing Page & Coffee HUB
+**File:** `frontend/landing-page`
 
-**Purpose:** Multi-language support and translation management
+**Purpose:** Public web portal & brand showcase for 456 Coffee
 
 **Key Features:**
-- Language translation
-- Text localization
-- UI string management
-- Multi-language support
-
-**Languages Supported:**
-- Thai (ไทย) - Default
-- English (ENG)
-- Others (configurable)
+- 456 Coffee สาขาหลัก (Verified Flagship Cafe & Roastery)
+- Direct Google Maps Navigation & Store info
+- Coffee Ecosystem & Academy information
+- Community News & Knowledge articles
+- Single-page responsive design (Desktop & Mobile)
 
 ---
 
@@ -733,11 +731,11 @@ npm run build
 # URL: https://liff.line.me/YOUR_LIFF_ID
 ```
 
-**Translator:**
+**Landing Page:**
 ```bash
 npm install
 npm run build
-# Deploy as translation service
+# Deploy to Vercel (https://coffee-cafe.shop)
 ```
 
 ### Docker Deployment (Optional)

@@ -77,13 +77,13 @@ npx prisma db seed
 cd ../frontend/admin-hq    && cp .env.example .env
 cd ../branch-pos           && cp .env.example .env
 cd ../buyer-liff           && cp .env.example .env
-cd ../translator           && cp .env.example .env
+cd ../landing-page         && cp .env.example .env
 cd ../..                   # back to repo root
 
 # 4. Run dev (one terminal!)
 npm run dev          # backend + admin-hq      ← daily driver
 # or
-npm run dev:full     # backend + ALL 4 frontends, output prefixed [api][admin][pos][liff][trn]
+npm run dev:full     # backend + ALL frontends, output prefixed [api][admin][pos][liff][land]
 ```
 
 Each prefixed line in the combined output tells you which process logged it.
@@ -93,11 +93,11 @@ Press `Ctrl+C` once to stop everything.
 
 | Service | URL |
 |---------|-----|
-| Backend API | http://localhost:5001 |
-| admin-hq    | http://localhost:5173 |
-| branch-pos  | http://localhost:5174 |
-| buyer-liff  | http://localhost:5175 |
-| translator  | http://localhost:5176 |
+| Backend API  | http://localhost:5001 |
+| admin-hq     | http://localhost:5173 |
+| branch-pos   | http://localhost:5174 |
+| buyer-liff   | http://localhost:5175 |
+| landing-page | http://localhost:5177 |
 
 ### Run only what you need
 
@@ -108,7 +108,7 @@ npm run dev:api          # only the backend
 npm run dev:admin        # only admin-hq (assumes API already running)
 npm run dev:pos
 npm run dev:liff
-npm run dev:translator
+npm run dev:landing
 ```
 
 Health check:

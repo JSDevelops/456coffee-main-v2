@@ -28,7 +28,8 @@ import {
   Wallet,
   Printer,
 } from 'lucide-react';
-import { api } from '../api';
+import { io } from 'socket.io-client';
+import { api, auth, SOCKET_URL } from '../api';
 import {
   Button,
   Card,
@@ -321,6 +322,48 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // Real-time live order updates via WebSocket
+  useEffect(() => {
+    const token = auth.getToken();
+    if (!token) return;
+
+    const socket = io(SOCKET_URL, {
+      auth: { token },
+      query: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('connect', () => {
+      socket.emit('join-admin');
+    });
+
+    socket.on('new-order', (newOrder: Order) => {
+      // Prepend to orders list if matching active branch filter or if viewing all
+      if (!branchId || newOrder.branchId === branchId) {
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === newOrder.id)) return prev;
+          return [newOrder, ...prev];
+        });
+      }
+      // Re-fetch stats to keep revenue and counters accurate
+      fetchStats();
+      const orderNum = newOrder.orderNumber || newOrder.id.slice(0, 8);
+      const total = newOrder.totalAmount ? `฿${newOrder.totalAmount.toLocaleString()}` : '';
+      toast.success(`ออร์เดอร์ใหม่ #${orderNum} ${total} (${newOrder.branchName || 'สาขา'})`);
+    });
+
+    socket.on('update-order', (updatedOrder: Order) => {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o))
+      );
+      fetchStats();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [branchId, fetchStats, toast]);
 
   // ─── Client-side filtering + sorting ───────────────────────────────────
   const filteredOrders = orders;

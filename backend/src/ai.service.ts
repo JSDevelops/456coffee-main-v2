@@ -21,7 +21,7 @@ export class AiService {
       this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     } else {
       this.logger.warn(
-        'GEMINI_API_KEY not set — AI features (recommend/translate) are disabled.',
+        'GEMINI_API_KEY not set — AI coffee recommendation is disabled.',
       );
     }
   }
@@ -58,26 +58,6 @@ export class AiService {
     } catch (error) {
       console.error('Gemini error:', error);
       return "Based on your mood, I'd suggest our signature Dirty Coffee!";
-    }
-  }
-
-  async translate(text: string, targetLanguage: 'Thai' | 'English') {
-    if (!this.model) return 'Translation service unavailable.';
-
-    const prompt = `
-      Translate the following text into ${targetLanguage}. 
-      Return ONLY the translated text without any explanations or quotes.
-      
-      Text: "${text}"
-    `;
-
-    try {
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      return response.text().trim();
-    } catch (error) {
-      console.error('Translation error:', error);
-      return 'Translation failed. Please try again.';
     }
   }
 }

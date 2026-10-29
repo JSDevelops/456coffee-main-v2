@@ -4,14 +4,13 @@
   "description": "Run backend + frontends from one terminal. See SETUP.md for full setup.",
   "scripts": {
     "dev": "concurrently -n api,admin -c blue,magenta \"npm:dev:api\" \"npm:dev:admin\"",
-    "dev:full": "concurrently -n api,admin,pos,liff,trn -c blue,magenta,yellow,green,cyan \"npm:dev:api\" \"npm:dev:admin\" \"npm:dev:pos\" \"npm:dev:liff\" \"npm:dev:translator\"",
+    "dev:full": "concurrently -n api,admin,pos,liff,land -c blue,magenta,yellow,green,cyan \"npm:dev:api\" \"npm:dev:admin\" \"npm:dev:pos\" \"npm:dev:liff\" \"npm:dev:landing\"",
     "dev:api": "npm --prefix backend run start:dev",
     "dev:admin": "npm --prefix frontend/admin-hq run dev",
     "dev:pos": "npm --prefix frontend/branch-pos run dev",
     "dev:liff": "npm --prefix frontend/buyer-liff run dev",
-    "dev:translator": "npm --prefix frontend/translator run dev",
     "dev:landing": "npm --prefix frontend/landing-page run dev",
-    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend/admin-hq install && npm --prefix frontend/branch-pos install && npm --prefix frontend/buyer-liff install && npm --prefix frontend/translator install && npm --prefix frontend/landing-page install",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend/admin-hq install && npm --prefix frontend/branch-pos install && npm --prefix frontend/buyer-liff install && npm --prefix frontend/landing-page install",
     "build:api": "npm --prefix backend run build",
     "test:api": "npm --prefix backend test",
     "db:backup": "./scripts/backup-db.sh"
