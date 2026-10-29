@@ -30,6 +30,7 @@ import {
   Loader2,
   Percent,
   Gift,
+  Bell,
 } from 'lucide-react';
 import { PaginationControls, useClientPagination } from '../Pagination';
 import { API_BASE, SOCKET_URL } from '../../api';
@@ -137,6 +138,21 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
 
   const [feedFilter, setFeedFilter] = useState<PlatformKey>('ALL');
   const [orderSearch, setOrderSearch] = useState('');
+  const [posAnnouncements, setPosAnnouncements] = useState<any[]>([]);
+  const [activeAnnouncement, setActiveAnnouncement] = useState<any | null>(null);
+
+  // Fetch branch announcements from HQ
+  useEffect(() => {
+    if (!branch?.id) return;
+    fetch(`${API_BASE}/announcements/branch/${branch.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPosAnnouncements(data);
+        }
+      })
+      .catch((err) => console.warn('Could not load announcements for POS:', err));
+  }, [branch?.id]);
 
   // Fetch menu lazily — uses the branch-scoped endpoint so per-branch
   // availability overrides (set by the manager) are respected.
@@ -630,6 +646,27 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
           )}
         </div>
 
+        {/* Announcement Bell (HQ News Alert) */}
+        {posAnnouncements.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setActiveAnnouncement(posAnnouncements[0])}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-xl shrink-0 transition-all text-xs font-bold shadow-sm"
+            style={{
+              background: '#fef3c7',
+              border: '1px solid #fde68a',
+              color: '#b45309',
+            }}
+            title="ประกาศจาก HQ"
+          >
+            <Bell size={14} className="text-amber-600 animate-bounce" />
+            <span className="hidden sm:inline">ประกาศ HQ</span>
+            <span className="w-4 h-4 rounded-full bg-amber-600 text-white text-[10px] font-black flex items-center justify-center">
+              {posAnnouncements.length}
+            </span>
+          </button>
+        )}
+
         {/* Live badge (desktop) */}
         <div className="hidden lg:flex items-center gap-1.5 h-9 px-3 rounded-xl shrink-0" style={{ background: '#fdfaf6', border: '1px solid #ece5da' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -637,6 +674,52 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
           <span className="text-xs font-black num text-[#2d241e] ml-1">{liveOrdersCount}</span>
         </div>
       </header>
+
+      {/* ── Active Announcement Popup Modal ── */}
+      {activeAnnouncement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-[#ece5da] relative">
+            <button
+              onClick={() => setActiveAnnouncement(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              aria-label="ปิดประกาศ"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Bell size={20} />
+              </div>
+              <div className="pr-4">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  {activeAnnouncement.type || 'ประกาศสาขา'}
+                </span>
+                <h3 className="text-base font-black text-[#2d241e] mt-1 leading-snug">
+                  {activeAnnouncement.title}
+                </h3>
+                <p className="text-[11px] text-[#7c543c]/70 mt-0.5">
+                  {activeAnnouncement.createdAt ? new Date(activeAnnouncement.createdAt).toLocaleDateString('th-TH', { dateStyle: 'long' }) : ''}
+                </p>
+              </div>
+            </div>
+
+            <div className="text-sm text-[#2d241e] whitespace-pre-line bg-[#fdfaf6] p-3.5 rounded-xl border border-[#ece5da] leading-relaxed max-h-60 overflow-y-auto">
+              {activeAnnouncement.content}
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setActiveAnnouncement(null)}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#ea580c] hover:bg-[#d94e07] shadow-sm transition-all"
+              >
+                รับทราบประกาศ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════════ MOBILE LAYOUT (< md) ════════ */}
       <div className="md:hidden flex-1 flex flex-col overflow-hidden">
