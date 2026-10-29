@@ -1,6 +1,4 @@
 {
-  "framework": "vite",
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
