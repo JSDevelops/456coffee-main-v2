@@ -476,14 +476,20 @@ export class OrderService {
       where.createdAt = { gte: d, lt: new Date(d.getTime() + 86400000) };
     } else if (filters?.dateFrom && filters?.dateTo) {
       const start = new Date(filters.dateFrom);
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(filters.dateTo);
       const end = new Date(filters.dateTo);
-      end.setHours(23, 59, 59, 999);
+      if (isDateOnly) {
+        end.setHours(23, 59, 59, 999);
+      }
       where.createdAt = { gte: start, lte: end };
     } else if (filters?.dateFrom) {
       where.createdAt = { gte: new Date(filters.dateFrom) };
     } else if (filters?.dateTo) {
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(filters.dateTo);
       const end = new Date(filters.dateTo);
-      end.setHours(23, 59, 59, 999);
+      if (isDateOnly) {
+        end.setHours(23, 59, 59, 999);
+      }
       where.createdAt = { lte: end };
     }
     if (filters?.search) {
@@ -512,7 +518,7 @@ export class OrderService {
     }
 
     const page = Math.max(1, filters?.page || 1);
-    const limit = Math.min(100, Math.max(10, filters?.limit || 25));
+    const limit = Math.min(10000, Math.max(1, filters?.limit || 25));
     const sort = filters?.sort || 'newest';
     const orderBy: Prisma.OrderOrderByWithRelationInput =
       sort === 'oldest'

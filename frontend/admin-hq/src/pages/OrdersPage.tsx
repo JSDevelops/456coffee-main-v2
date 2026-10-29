@@ -27,6 +27,7 @@ import {
   FileText,
   Wallet,
   Printer,
+  Loader2,
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { api, auth, SOCKET_URL } from '../api';
@@ -175,30 +176,291 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
 }
 
-function dateForPreset(preset: DatePreset): string | undefined {
-  if (preset === 'custom') return undefined;
-  const d = new Date();
-  if (preset === 'today') return d.toISOString().slice(0, 10);
-  if (preset === 'yesterday') {
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }
-  // 7d / 30d → undefined (filter client-side via dateAfter)
-  return undefined;
+interface DateRangeResult {
+  from?: string; // ISO string
+  to?: string;   // ISO string
+  label: string;
+  fileTag: string;
 }
 
-function dateAfterForPreset(preset: DatePreset): Date | undefined {
+function getDateRangeForPreset(
+  preset: DatePreset,
+  customStart?: string,
+  customEnd?: string
+): DateRangeResult {
+  const now = new Date();
+  if (preset === 'today') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const dateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    return {
+      from: start.toISOString(),
+      to: end.toISOString(),
+      label: 'วันนี้',
+      fileTag: `วันนี้_${dateStr}`,
+    };
+  }
+  if (preset === 'yesterday') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+    const dateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    return {
+      from: start.toISOString(),
+      to: end.toISOString(),
+      label: 'เมื่อวาน',
+      fileTag: `เมื่อวาน_${dateStr}`,
+    };
+  }
   if (preset === '7d') {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    return {
+      from: start.toISOString(),
+      to: end.toISOString(),
+      label: '7 วัน',
+      fileTag: 'ย้อนหลัง7วัน',
+    };
   }
   if (preset === '30d') {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    return {
+      from: start.toISOString(),
+      to: end.toISOString(),
+      label: '30 วัน',
+      fileTag: 'ย้อนหลัง30วัน',
+    };
   }
-  return undefined;
+  if (preset === 'custom' && (customStart || customEnd)) {
+    let from: string | undefined;
+    let to: string | undefined;
+    if (customStart) {
+      const [y, m, d] = customStart.split('-').map(Number);
+      from = new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+    }
+    if (customEnd) {
+      const [y, m, d] = customEnd.split('-').map(Number);
+      to = new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+    }
+    const tag = `กำหนดเอง_${customStart || 'เริ่ม'}_ถึง_${customEnd || 'ปัจจุบัน'}`;
+    const label = `กำหนดเอง (${customStart || 'เริ่ม'} ถึง ${customEnd || 'ปัจจุบัน'})`;
+    return {
+      from,
+      to,
+      label,
+      fileTag: tag,
+    };
+  }
+  return { label: 'ทั้งหมด', fileTag: 'ทั้งหมด' };
+}
+
+interface OrderExportDropdownProps {
+  onExport: (format: 'xlsx' | 'csv', scope: 'filtered' | 'all') => void;
+  loading?: boolean;
+  filterLabel: string;
+  filteredCount: number;
+  totalCount: number;
+}
+
+function OrderExportDropdown({
+  onExport,
+  loading = false,
+  filterLabel,
+  filteredCount,
+  totalCount,
+}: OrderExportDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const handleSelect = (format: 'xlsx' | 'csv', scope: 'filtered' | 'all') => {
+    setOpen(false);
+    onExport(format, scope);
+  };
+
+  return (
+    <div className="relative inline-block" ref={menuRef}>
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer select-none"
+        style={{
+          background: 'var(--surface-2)',
+          color: loading ? 'var(--text-faint)' : 'var(--text-2)',
+          border: '1px solid var(--border)',
+        }}
+        title="ส่งออกรายงาน (Excel / CSV)"
+      >
+        {loading ? (
+          <Loader2 size={14} className="animate-spin text-amber-500" />
+        ) : (
+          <Download size={14} />
+        )}
+        <span>{loading ? 'กำลังส่งออก...' : 'ส่งออก'}</span>
+        <ChevronDown
+          size={13}
+          className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.96 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute top-full right-0 mt-1.5 w-72 rounded-xl shadow-2xl overflow-hidden z-50"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              boxShadow: '0 16px 36px -6px rgba(0,0,0,0.35)',
+            }}
+          >
+            {/* Section 1: Active filter scope */}
+            <div
+              className="px-3.5 py-2 text-[11px] font-semibold border-b flex items-center justify-between"
+              style={{
+                background: 'rgba(217, 119, 6, 0.08)',
+                borderColor: 'var(--border)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <span className="truncate">
+                ตามตัวกรอง: <strong className="text-amber-500">{filterLabel}</strong>
+              </span>
+              <span className="font-bold text-amber-400 shrink-0 ml-1">
+                {filteredCount.toLocaleString()} ออเดอร์
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleSelect('xlsx', 'filtered')}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium text-left transition-colors hover:bg-emerald-500/10 cursor-pointer"
+              style={{ color: 'var(--text)' }}
+            >
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}
+              >
+                <FileSpreadsheet size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold" style={{ color: 'var(--text)' }}>
+                  ส่งออก Excel ({filterLabel})
+                </p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  เปิดด้วย MS Excel ได้ทันที ({filteredCount.toLocaleString()} รายการ)
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelect('csv', 'filtered')}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium text-left transition-colors hover:bg-blue-500/10 border-t cursor-pointer"
+              style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+            >
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}
+              >
+                <FileText size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold" style={{ color: 'var(--text)' }}>
+                  ส่งออก CSV ({filterLabel})
+                </p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  UTF-8 ภาษาไทยสมบูรณ์ ({filteredCount.toLocaleString()} รายการ)
+                </p>
+              </div>
+            </button>
+
+            {/* Section 2: All-time scope */}
+            <div
+              className="px-3.5 py-2 text-[11px] font-semibold border-t border-b flex items-center justify-between"
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderColor: 'var(--border)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <span>ทั้งหมดในระบบ</span>
+              <span className="font-bold text-gray-300">
+                {totalCount.toLocaleString()} ออเดอร์
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleSelect('xlsx', 'all')}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium text-left transition-colors hover:bg-emerald-500/10 cursor-pointer"
+              style={{ color: 'var(--text)' }}
+            >
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}
+              >
+                <FileSpreadsheet size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold" style={{ color: 'var(--text)' }}>
+                  ส่งออก Excel ทั้งหมด
+                </p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  ทุกช่วงเวลา ทุกสาขา ({totalCount.toLocaleString()} รายการ)
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelect('csv', 'all')}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium text-left transition-colors hover:bg-blue-500/10 border-t cursor-pointer"
+              style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+            >
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}
+              >
+                <FileText size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold" style={{ color: 'var(--text)' }}>
+                  ส่งออก CSV ทั้งหมด
+                </p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  ทุกช่วงเวลา ทุกสาขา ({totalCount.toLocaleString()} รายการ)
+                </p>
+              </div>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -271,15 +533,9 @@ export default function OrdersPage() {
       const params = new URLSearchParams();
       if (branchId) params.set('branchId', branchId);
       if (debouncedSearch) params.set('search', debouncedSearch);
-      if (datePreset === 'custom') {
-        if (customStartDate) params.set('dateFrom', customStartDate);
-        if (customEndDate) params.set('dateTo', customEndDate);
-      } else {
-        const date = dateForPreset(datePreset);
-        if (date) params.set('date', date);
-        const dateAfter = dateAfterForPreset(datePreset);
-        if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
-      }
+      const range = getDateRangeForPreset(datePreset, customStartDate, customEndDate);
+      if (range.from) params.set('dateFrom', range.from);
+      if (range.to) params.set('dateTo', range.to);
       if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
       if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
       if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
@@ -508,28 +764,37 @@ export default function OrdersPage() {
     w.document.close();
   };
 
-  const handleExport = async (format: 'xlsx' | 'csv' = 'xlsx') => {
+  const activeFilterRange = useMemo(
+    () => getDateRangeForPreset(datePreset, customStartDate, customEndDate),
+    [datePreset, customStartDate, customEndDate]
+  );
+
+  const handleExport = async (
+    format: 'xlsx' | 'csv' = 'xlsx',
+    scope: 'filtered' | 'all' = 'filtered'
+  ) => {
     setExporting(true);
     try {
-      // Query all matching orders for the current filter criteria (up to 5000 records)
       const params = new URLSearchParams();
-      if (branchId) params.set('branchId', branchId);
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (datePreset === 'custom') {
-        if (customStartDate) params.set('dateFrom', customStartDate);
-        if (customEndDate) params.set('dateTo', customEndDate);
-      } else {
-        const date = dateForPreset(datePreset);
-        if (date) params.set('date', date);
-        const dateAfter = dateAfterForPreset(datePreset);
-        if (dateAfter) params.set('dateFrom', dateAfter.toISOString());
+      let fileTag = 'ทั้งหมดในระบบ';
+      let scopeLabel = 'ทั้งหมดในระบบ';
+
+      if (scope === 'filtered') {
+        const range = getDateRangeForPreset(datePreset, customStartDate, customEndDate);
+        if (range.from) params.set('dateFrom', range.from);
+        if (range.to) params.set('dateTo', range.to);
+        if (branchId) params.set('branchId', branchId);
+        if (debouncedSearch) params.set('search', debouncedSearch);
+        if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
+        if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
+        if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
+        fileTag = range.fileTag;
+        scopeLabel = range.label;
       }
-      if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
-      if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
-      if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
-      params.set('sort', sortKey);
+
+      params.set('sort', sortKey || 'newest');
       params.set('page', '1');
-      params.set('limit', '5000');
+      params.set('limit', '10000');
 
       let exportList = orders;
       try {
@@ -542,7 +807,7 @@ export default function OrdersPage() {
       }
 
       if (!exportList || exportList.length === 0) {
-        toast.error('ไม่มีข้อมูลออเดอร์สำหรับ Export');
+        toast.error(`ไม่มีข้อมูลออเดอร์สำหรับ Export (${scopeLabel})`);
         return;
       }
 
@@ -554,8 +819,10 @@ export default function OrdersPage() {
         const itemsDetail = (o.items || [])
           .map((it) => `${it.product?.name || it.productName || 'สินค้า'} x${it.quantity}`)
           .join(', ');
-        const paymentMethod = o.payment?.method || '-';
-        const paymentStatus = o.payment?.status || '-';
+        const paymentMethod = o.payment?.method ? (PAYMENT_LABEL[o.payment.method] || o.payment.method) : '-';
+        const paymentStatus = o.payment?.status === 'PAID' ? 'ชำระแล้ว' : 'รอชำระ';
+        const orderStatus = STATUS_CFG[o.status]?.label || o.status;
+        const fulfillmentType = o.fulfillmentType ? (FULFILLMENT_LABEL[o.fulfillmentType] || o.fulfillmentType) : '-';
         const dateStr = new Date(o.createdAt).toLocaleString('th-TH');
 
         return {
@@ -568,24 +835,35 @@ export default function OrdersPage() {
           'ยอดชำระสุทธิ (บาท)': o.totalAmount,
           'วิธีชำระเงิน': paymentMethod,
           'สถานะการชำระ': paymentStatus,
-          'สถานะออเดอร์': o.status,
-          'ประเภทรับสินค้า': o.fulfillmentType || '-',
+          'สถานะออเดอร์': orderStatus,
+          'ประเภทรับสินค้า': fulfillmentType,
         };
       });
 
+      const filename = `456coffee_orders_${fileTag}`;
+
       if (format === 'csv') {
-        exportToCsv('456coffee_orders', orderRows);
-        toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็นไฟล์ CSV (.csv) สำเร็จ`);
+        exportToCsv(filename, orderRows);
+        toast.success(`ส่งออก ${exportList.length.toLocaleString()} ออเดอร์ (${scopeLabel}) เป็นไฟล์ CSV (.csv) สำเร็จ`);
       } else {
         // Summary by Branch for Sheet 2
         const branchSummaryMap = new Map<string, { count: number; total: number }>();
+        const paymentSummaryMap = new Map<string, { count: number; total: number }>();
+
         for (const o of exportList) {
           const bName = o.branch?.name || 'ไม่ระบุสาขา';
-          const curr = branchSummaryMap.get(bName) || { count: 0, total: 0 };
-          curr.count += 1;
-          curr.total += o.totalAmount;
-          branchSummaryMap.set(bName, curr);
+          const bCurr = branchSummaryMap.get(bName) || { count: 0, total: 0 };
+          bCurr.count += 1;
+          bCurr.total += o.totalAmount;
+          branchSummaryMap.set(bName, bCurr);
+
+          const pMethod = o.payment?.method ? (PAYMENT_LABEL[o.payment.method] || o.payment.method) : 'ไม่ระบุ';
+          const pCurr = paymentSummaryMap.get(pMethod) || { count: 0, total: 0 };
+          pCurr.count += 1;
+          pCurr.total += o.totalAmount;
+          paymentSummaryMap.set(pMethod, pCurr);
         }
+
         const summaryRows = Array.from(branchSummaryMap.entries()).map(([branch, stat]) => ({
           'สาขา': branch,
           'จำนวนออเดอร์': stat.count,
@@ -593,15 +871,24 @@ export default function OrdersPage() {
           'ยอดเฉลี่ยต่อบิล (บาท)': Number((stat.total / (stat.count || 1)).toFixed(2)),
         }));
 
+        const totalRev = exportList.reduce((acc, cur) => acc + cur.totalAmount, 0) || 1;
+        const paymentRows = Array.from(paymentSummaryMap.entries()).map(([method, stat]) => ({
+          'วิธีชำระเงิน': method,
+          'จำนวนออเดอร์': stat.count,
+          'ยอดเงินรวม (บาท)': Number(stat.total.toFixed(2)),
+          'สัดส่วน (%)': Number(((stat.total / totalRev) * 100).toFixed(1)),
+        }));
+
         exportToExcel({
-          filename: '456coffee_orders',
+          filename,
           sheets: [
             { sheetName: 'รายการออเดอร์', data: orderRows },
             { sheetName: 'สรุปยอดขายตามสาขา', data: summaryRows },
+            { sheetName: 'สรุปแยกตามวิธีชำระเงิน', data: paymentRows },
           ],
         });
 
-        toast.success(`ส่งออก ${exportList.length} ออเดอร์เป็นไฟล์ Excel (.xlsx) สำเร็จ`);
+        toast.success(`ส่งออก ${exportList.length.toLocaleString()} ออเดอร์ (${scopeLabel}) เป็นไฟล์ Excel (.xlsx) สำเร็จ`);
       }
     } catch (e: any) {
       toast.error(e?.message || 'ส่งออกข้อมูลไม่สำเร็จ');
@@ -622,7 +909,13 @@ export default function OrdersPage() {
             <Button variant="secondary" leftIcon={<RefreshCw size={14} />} onClick={fetchAll}>
               รีเฟรช
             </Button>
-            <ExportDropdown onExport={handleExport} loading={exporting} />
+            <OrderExportDropdown
+              onExport={handleExport}
+              loading={exporting}
+              filterLabel={activeFilterRange.label}
+              filteredCount={meta.total}
+              totalCount={stats?.total ?? 0}
+            />
           </>
         }
       />
