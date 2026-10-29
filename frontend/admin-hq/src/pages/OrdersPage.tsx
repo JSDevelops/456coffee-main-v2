@@ -254,6 +254,88 @@ function getDateRangeForPreset(
   return { label: 'ทั้งหมด', fileTag: 'ทั้งหมด' };
 }
 
+function buildOrderQueryParams({
+  datePreset,
+  customStartDate,
+  customEndDate,
+  branchId,
+  search,
+  statusSet,
+  paymentSet,
+  fulfillmentSet,
+  sortKey,
+}: {
+  datePreset?: DatePreset;
+  customStartDate?: string;
+  customEndDate?: string;
+  branchId?: string;
+  search?: string;
+  statusSet?: Set<string>;
+  paymentSet?: Set<string>;
+  fulfillmentSet?: Set<string>;
+  sortKey?: string;
+}): URLSearchParams {
+  const params = new URLSearchParams();
+  if (branchId) params.set('branchId', branchId);
+  if (search) params.set('search', search);
+
+  if (datePreset === 'today') {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    params.set('date', todayStr);
+  } else if (datePreset === 'yesterday') {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    params.set('date', yesterdayStr);
+  } else if (datePreset === '7d') {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    params.set('dateFrom', d.toISOString());
+  } else if (datePreset === '30d') {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    params.set('dateFrom', d.toISOString());
+  } else if (datePreset === 'custom') {
+    if (customStartDate) params.set('dateFrom', customStartDate);
+    if (customEndDate) params.set('dateTo', customEndDate);
+  }
+
+  if (statusSet && statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
+  if (paymentSet && paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
+  if (fulfillmentSet && fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
+  if (sortKey) params.set('sort', sortKey);
+
+  return params;
+}
+
+async function fetchAllOrdersLoop(baseParams: URLSearchParams, expectedTotal: number): Promise<Order[]> {
+  const allOrders: Order[] = [];
+  const limit = 100;
+  let currentPage = 1;
+  const maxPages = Math.min(100, Math.max(1, Math.ceil(expectedTotal / limit)));
+
+  while (currentPage <= maxPages) {
+    const p = new URLSearchParams(baseParams);
+    p.set('page', String(currentPage));
+    p.set('limit', String(limit));
+
+    try {
+      const res = await api.get<OrderListResponse>(`/orders?${p}`);
+      if (!res?.data || res.data.length === 0) break;
+      allOrders.push(...res.data);
+      if (res.data.length < limit || allOrders.length >= (res.meta?.total || expectedTotal)) {
+        break;
+      }
+    } catch {
+      break;
+    }
+    currentPage++;
+  }
+
+  return allOrders;
+}
+
 interface OrderExportDropdownProps {
   onExport: (format: 'xlsx' | 'csv', scope: 'filtered' | 'all') => void;
   loading?: boolean;
@@ -530,16 +612,17 @@ export default function OrdersPage() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (branchId) params.set('branchId', branchId);
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      const range = getDateRangeForPreset(datePreset, customStartDate, customEndDate);
-      if (range.from) params.set('dateFrom', range.from);
-      if (range.to) params.set('dateTo', range.to);
-      if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
-      if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
-      if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
-      params.set('sort', sortKey);
+      const params = buildOrderQueryParams({
+        datePreset,
+        customStartDate,
+        customEndDate,
+        branchId,
+        search: debouncedSearch,
+        statusSet,
+        paymentSet,
+        fulfillmentSet,
+        sortKey,
+      });
       params.set('page', String(page));
       params.set('limit', String(pageSize));
 
@@ -775,35 +858,39 @@ export default function OrdersPage() {
   ) => {
     setExporting(true);
     try {
-      const params = new URLSearchParams();
+      let exportList: Order[] = [];
       let fileTag = 'ทั้งหมดในระบบ';
       let scopeLabel = 'ทั้งหมดในระบบ';
 
       if (scope === 'filtered') {
         const range = getDateRangeForPreset(datePreset, customStartDate, customEndDate);
-        if (range.from) params.set('dateFrom', range.from);
-        if (range.to) params.set('dateTo', range.to);
-        if (branchId) params.set('branchId', branchId);
-        if (debouncedSearch) params.set('search', debouncedSearch);
-        if (statusSet.size > 0) params.set('status', Array.from(statusSet).join(','));
-        if (paymentSet.size > 0) params.set('paymentMethod', Array.from(paymentSet).join(','));
-        if (fulfillmentSet.size > 0) params.set('fulfillmentType', Array.from(fulfillmentSet).join(','));
         fileTag = range.fileTag;
         scopeLabel = range.label;
-      }
 
-      params.set('sort', sortKey || 'newest');
-      params.set('page', '1');
-      params.set('limit', '10000');
-
-      let exportList = orders;
-      try {
-        const fullRes = await api.get<OrderListResponse>(`/orders?${params}`);
-        if (fullRes?.data && fullRes.data.length > 0) {
-          exportList = fullRes.data;
+        // If all matching orders fit on the current view (e.g. today has 13 orders <= pageSize)
+        // and we are on page 1, directly use `orders`! Guaranteed 100% match with what's on screen!
+        if (meta.total <= orders.length && page === 1 && orders.length > 0) {
+          exportList = [...orders];
+        } else {
+          // If there are more orders than what fits on page 1, fetch all pages in chunks of 100
+          const baseParams = buildOrderQueryParams({
+            datePreset,
+            customStartDate,
+            customEndDate,
+            branchId,
+            search: debouncedSearch,
+            statusSet,
+            paymentSet,
+            fulfillmentSet,
+            sortKey: sortKey || 'newest',
+          });
+          exportList = await fetchAllOrdersLoop(baseParams, meta.total);
         }
-      } catch {
-        // Fallback to currently loaded orders
+      } else {
+        // Scope === 'all'
+        const baseParams = new URLSearchParams();
+        if (sortKey) baseParams.set('sort', sortKey);
+        exportList = await fetchAllOrdersLoop(baseParams, stats?.total || 5000);
       }
 
       if (!exportList || exportList.length === 0) {
@@ -814,16 +901,25 @@ export default function OrdersPage() {
       // Detailed Orders
       const orderRows = exportList.map((o) => {
         const branchName = o.branch?.name || '-';
-        const customer = o.customerName || o.customerUid || '-';
+        const customer = o.customerName || o.customerUid || 'ลูกค้าหน้าร้าน';
         const itemsCount = o.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 0;
         const itemsDetail = (o.items || [])
           .map((it) => `${it.product?.name || it.productName || 'สินค้า'} x${it.quantity}`)
           .join(', ');
         const paymentMethod = o.payment?.method ? (PAYMENT_LABEL[o.payment.method] || o.payment.method) : '-';
-        const paymentStatus = o.payment?.status === 'PAID' ? 'ชำระแล้ว' : 'รอชำระ';
+        const paymentStatus = o.payment?.status === 'PAID' ? 'จ่ายแล้ว' : 'รอชำระ';
         const orderStatus = STATUS_CFG[o.status]?.label || o.status;
         const fulfillmentType = o.fulfillmentType ? (FULFILLMENT_LABEL[o.fulfillmentType] || o.fulfillmentType) : '-';
-        const dateStr = new Date(o.createdAt).toLocaleString('th-TH');
+        
+        // Exact formatted date matching local time
+        const d = new Date(o.createdAt);
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hr = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const sec = String(d.getSeconds()).padStart(2, '0');
+        const dateStr = `${y}-${mo}-${day} ${hr}:${min}:${sec}`;
 
         return {
           'เลขที่ออเดอร์': o.orderNo,
