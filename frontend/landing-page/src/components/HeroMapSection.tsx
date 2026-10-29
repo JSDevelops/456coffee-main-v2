@@ -136,10 +136,10 @@ export function HeroMapSection() {
   ];
 
   useEffect(() => {
+    // 1. Fetch Ecosystem locations
     fetchLocationsApi()
       .then((res) => {
         if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-          // Normalize API pins
           const dynamicPins: LocationItem[] = res.data.map((item: any, idx: number) => ({
             id: item.id || `dyn-${idx}`,
             type: (item.type?.toLowerCase() === 'cafe' ? 'cafe' : item.type?.toLowerCase() === 'plantation' ? 'plantation' : 'academy') as any,
@@ -147,7 +147,6 @@ export function HeroMapSection() {
             badge: item.badge || (item.type === 'CAFE' ? 'Cafe Branch' : item.type === 'PLANTATION' ? 'เครือข่ายภูพาน' : 'Academy Hub'),
             district: item.district || 'อ.เมือง',
             province: item.province || 'จ.กาฬสินธุ์',
-            // Default coords if needed
             coords: {
               x: 35 + ((idx * 17) % 50),
               y: 30 + ((idx * 23) % 45),
@@ -162,8 +161,35 @@ export function HeroMapSection() {
           setDynamicLocations(dynamicPins);
         }
       })
-      .catch((err) => {
-        console.warn('Using default locations:', err);
+      .catch(() => {
+        // Fallback to fetch actual branches from /api/branches
+        import('../api').then(({ fetchBranchesApi }) => {
+          fetchBranchesApi().then((branches) => {
+            if (branches && branches.length > 0) {
+              const branchPins: LocationItem[] = branches.map((b, idx) => ({
+                id: b.id,
+                type: 'cafe' as const,
+                name: b.name,
+                badge: idx === 0 ? 'Flagship Cafe & Roastery' : 'Active Branch Station',
+                district: 'อ.เมือง',
+                province: 'จ.กาฬสินธุ์',
+                coords: {
+                  x: 48 - (idx * 4),
+                  y: 52 + (idx * 6),
+                },
+                hoursOrCapacity: `${b.openTime || '07:00'} - ${b.closeTime || '17:00'} น.`,
+                phone: b.phone || '061-305-5625',
+                details: b.address || b.location || 'ร้านคาเฟ่ 456 Coffee เสิร์ฟกาแฟสดโรบัสต้าภูพาน',
+                stats: 'บริการสดใหม่ทุกวัน',
+                actionText: 'ดูข้อมูลสาขา',
+                actionHref: '#cafes',
+              }));
+              // Merge with default plantation and academy pins
+              const otherPins = locations.filter(l => l.type !== 'cafe');
+              setDynamicLocations([...branchPins, ...otherPins]);
+            }
+          });
+        });
       });
   }, []);
 

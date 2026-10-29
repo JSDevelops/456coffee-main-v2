@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Coffee, MapPin, Phone, Clock, Navigation, CheckCircle2, Star, Sparkles } from 'lucide-react';
+import { fetchBranchesApi, PublicBranch } from '../api';
 
 export function CafeLocationsSection() {
-  const branches = [
+  const [branches, setBranches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fallbackBranches = [
     {
       id: 'main',
       name: '456 Coffee - สาขาหลัก เมืองกาฬสินธุ์',
       badge: 'Flagship Cafe & Roastery',
-      address: 'ใจกลางเมืองกาฬสินธุ์ ใกล้ศูนย์ราชการและย่านธุรกิจ อ.เมือง จ.กาฬสินธุ์',
+      address: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ ถนนทางหลวง 213 ต.กาฬสินธุ์ อ.เมือง จ.กาฬสินธุ์',
       hours: '08:30 - 16:30 น. (เปิดบริการทุกวัน)',
       phone: '061-305-5625',
       features: [
@@ -17,13 +21,13 @@ export function CafeLocationsSection() {
         'ที่จอดรถสะดวกสบายหน้าร้าน',
       ],
       popularDrinks: ['Phu Phan Dirty', 'Classic Espresso เย็น', 'Orange Americano'],
-      mapUrl: 'https://maps.google.com/?q=Kalasin+Thailand',
+      mapUrl: 'https://maps.google.com/?q=16.43444,103.50428',
     },
     {
       id: 'otop',
-      name: '456 Coffee - สาขา ศูนย์ OTOP กาฬสินธุ์',
+      name: '456 Cafe - สาขา 2 (ศูนย์ OTOP)',
       badge: 'Tourist Station & Souvenir Hub',
-      address: 'ศูนย์ส่งเสริมและจำหน่ายผลิตภัณฑ์ OTOP จังหวัดกาฬสินธุ์ อ.เมือง จ.กาฬสินธุ์',
+      address: 'ศูนย์โอท็อปจังหวัดกาฬสินธุ์ ศาลากลางกาฬสินธุ์ หลังเก่า อ.เมือง จ.กาฬสินธุ์',
       hours: '07:00 - 17:00 น. (เปิดบริการทุกวัน)',
       phone: '061-305-5625',
       features: [
@@ -33,9 +37,47 @@ export function CafeLocationsSection() {
         'เสิร์ฟเครื่องดื่มรวดเร็วทันใจ',
       ],
       popularDrinks: ['ชาไทยพรีเมียม', 'Coconut Latte', 'ดาร์กโกโก้ภูพาน'],
-      mapUrl: 'https://maps.google.com/?q=OTOP+Kalasin',
+      mapUrl: 'https://maps.google.com/?q=16.434233,103.507347',
     },
   ];
+
+  useEffect(() => {
+    async function loadBranches() {
+      try {
+        const liveBranches = await fetchBranchesApi();
+        if (liveBranches && liveBranches.length > 0) {
+          const mapped = liveBranches.map((b, idx) => {
+            const lat = b.latitude || 16.43444;
+            const lng = b.longitude || 103.50428;
+            return {
+              id: b.id,
+              name: b.name,
+              badge: idx === 0 ? 'Flagship Cafe & Roastery' : 'Active Branch Station',
+              address: b.address || b.location || 'อ.เมือง จ.กาฬสินธุ์',
+              hours: `${b.openTime || '07:00'} - ${b.closeTime || '17:00'} น. (${b.isOpen !== false ? 'เปิดให้บริการ' : 'ปิดทำการชั่วคราว'})`,
+              phone: b.phone || '061-305-5625',
+              features: [
+                'กาแฟโรบัสต้าภูพานคั่วสดแท้ 100%',
+                'บริการรวดเร็ว พร้อมเสิร์ฟ Takeaway',
+                'มี Wi-Fi ฟรี พร้อมชำระเงินสะดวกทุกช่องทาง',
+                'บริการประทับใจระดับพรีเมียม',
+              ],
+              popularDrinks: ['Phu Phan Dirty', 'Classic Espresso เย็น', 'ชาไทยพรีเมียม'],
+              mapUrl: `https://maps.google.com/?q=${lat},${lng}`,
+            };
+          });
+          setBranches(mapped);
+        } else {
+          setBranches(fallbackBranches);
+        }
+      } catch {
+        setBranches(fallbackBranches);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadBranches();
+  }, []);
 
   return (
     <section id="cafes" className="py-24 bg-white relative">
@@ -110,7 +152,7 @@ export function CafeLocationsSection() {
                     เมนูยอดนิยมประจำสาขา:
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {b.popularDrinks.map((drink, i) => (
+                    {b.popularDrinks.map((drink: string, i: number) => (
                       <span
                         key={i}
                         className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-[#582F0E] border border-[#DDB892]/40 shadow-2xs"
@@ -124,7 +166,7 @@ export function CafeLocationsSection() {
                 {/* Features */}
                 <div className="pt-4 border-t border-[#DDB892]/30">
                   <div className="grid grid-cols-2 gap-2 text-xs text-[#7F5539]">
-                    {b.features.map((feat, i) => (
+                    {b.features.map((feat: string, i: number) => (
                       <div key={i} className="flex items-center gap-1.5">
                         <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
                         <span>{feat}</span>

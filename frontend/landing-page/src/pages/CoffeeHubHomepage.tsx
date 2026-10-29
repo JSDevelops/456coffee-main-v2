@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Coffee,
   Sprout,
@@ -22,6 +22,7 @@ import {
   Check
 } from 'lucide-react';
 import './CoffeeHubHomepage.css';
+import { fetchBranchesApi, PublicBranch } from '../api';
 
 // Types
 interface NewsItemData {
@@ -40,23 +41,86 @@ export default function CoffeeHubHomepage() {
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
 
-  // Real verified business data of 456 Coffee Flagship (Only verified real location)
-  const realStore = {
-    name: '456 Coffee สาขาหลัก',
-    englishName: '456 Coffee Flagship Store & Roastery',
-    badge: 'ร้านจริง · สาขาหลัก',
-    tagline: 'Flagship Cafe & Roastery',
-    address: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ ถนนทางหลวง 213 ต.กาฬสินธุ์ อ.เมือง จ.กาฬสินธุ์ 46000',
-    shortAddress: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ (ถ.ทางหลวง 213)',
-    coordinates: '16.43444, 103.50428',
-    hours: '08:30 - 16:30 น. (เปิดให้บริการทุกวัน)',
-    phone: '061-305-5625',
-    imageUrl: '/cafe-main.jpg',
-    description: 'คาเฟ่เรือนไม้ 2 ชั้น บรรยากาศร่มรื่น โปร่งสบาย เสิร์ฟกาแฟโรบัสต้าภูพานคั่วสด เมนู Specialty Coffee, Slow bar บาริสต้ามืออาชีพ มีมุมทำงานพร้อม Wi-Fi และที่จอดรถสะดวกสบาย',
-    googleMapsDirectionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=16.43444,103.50428',
-    googleMapsSearchUrl: 'https://maps.google.com/?q=16.43444,103.50428',
-    embedMapUrl: 'https://maps.google.com/maps?q=16.43444,103.50428&hl=th&z=16&output=embed'
-  };
+  // Fallback branch list if offline
+  const defaultBranches = [
+    {
+      id: 'main',
+      name: '456 Coffee สาขาหลัก',
+      englishName: '456 Coffee Flagship Store & Roastery',
+      badge: 'ร้านจริง · สาขาหลัก',
+      tagline: 'Flagship Cafe & Roastery',
+      address: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ ถนนทางหลวง 213 ต.กาฬสินธุ์ อ.เมือง จ.กาฬสินธุ์ 46000',
+      shortAddress: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ (ถ.ทางหลวง 213)',
+      coordinates: '16.43444, 103.50428',
+      latitude: 16.43444,
+      longitude: 103.50428,
+      hours: '08:30 - 16:30 น. (เปิดให้บริการทุกวัน)',
+      phone: '061-305-5625',
+      imageUrl: '/cafe-main.jpg',
+      description: 'คาเฟ่เรือนไม้ 2 ชั้น บรรยากาศร่มรื่น โปร่งสบาย เสิร์ฟกาแฟโรบัสต้าภูพานคั่วสด เมนู Specialty Coffee, Slow bar บาริสต้ามืออาชีพ มีมุมทำงานพร้อม Wi-Fi และที่จอดรถสะดวกสบาย',
+      googleMapsDirectionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=16.43444,103.50428',
+      googleMapsSearchUrl: 'https://maps.google.com/?q=16.43444,103.50428',
+      embedMapUrl: 'https://maps.google.com/maps?q=16.43444,103.50428&hl=th&z=16&output=embed'
+    },
+    {
+      id: 'otop',
+      name: '456 Cafe - สาขา 2 (ศูนย์ OTOP)',
+      englishName: '456 Cafe Kalasin OTOP Center',
+      badge: 'สาขา 2 · ศูนย์ OTOP',
+      tagline: 'Tourist Station & Souvenir Hub',
+      address: 'ศูนย์โอท็อปจังหวัดกาฬสินธุ์ ศาลากลางกาฬสินธุ์ หลังเก่า อ.เมือง จ.กาฬสินธุ์',
+      shortAddress: 'ศูนย์โอท็อปจังหวัดกาฬสินธุ์',
+      coordinates: '16.434233, 103.507347',
+      latitude: 16.434233,
+      longitude: 103.507347,
+      hours: '07:00 - 17:00 น. (เปิดให้บริการทุกวัน)',
+      phone: '061-305-5625',
+      imageUrl: '/cafe-main.jpg',
+      description: 'จุดแวะพักนักท่องเที่ยวและผู้เดินทาง ของฝากกาแฟดริปแบ็ก & เมล็ดคั่วแท้โรบัสต้าภูพาน ศูนย์รวมผ้าไหมแพรวาและสินค้าชุมชน เสิร์ฟเครื่องดื่มรวดเร็วทันใจ',
+      googleMapsDirectionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=16.434233,103.507347',
+      googleMapsSearchUrl: 'https://maps.google.com/?q=16.434233,103.507347',
+      embedMapUrl: 'https://maps.google.com/maps?q=16.434233,103.507347&hl=th&z=16&output=embed'
+    }
+  ];
+
+  const [branchesList, setBranchesList] = useState(defaultBranches);
+  const [selectedBranchIndex, setSelectedBranchIndex] = useState(0);
+
+  useEffect(() => {
+    fetchBranchesApi().then((data) => {
+      if (data && data.length > 0) {
+        const formatted = data.map((b, idx) => {
+          const lat = b.latitude || (idx === 0 ? 16.43444 : 16.434233);
+          const lng = b.longitude || (idx === 0 ? 103.50428 : 103.507347);
+          const coordsStr = `${lat}, ${lng}`;
+          return {
+            id: b.id,
+            name: b.name,
+            englishName: idx === 0 ? '456 Coffee Flagship Store & Roastery' : `456 Coffee Branch ${idx + 1}`,
+            badge: idx === 0 ? 'ร้านจริง · สาขาหลัก' : `สาขา ${idx + 1}`,
+            tagline: idx === 0 ? 'Flagship Cafe & Roastery' : 'Active Branch Station',
+            address: b.address || b.location || 'อ.เมือง จ.กาฬสินธุ์',
+            shortAddress: b.location || b.address || 'สาขาใน จ.กาฬสินธุ์',
+            coordinates: coordsStr,
+            latitude: lat,
+            longitude: lng,
+            hours: `${b.openTime || '07:00'} - ${b.closeTime || '17:00'} น. (${b.isOpen !== false ? 'เปิดให้บริการ' : 'ปิดชั่วคราว'})`,
+            phone: b.phone || '061-305-5625',
+            imageUrl: b.imageUrl && b.imageUrl.startsWith('http') ? b.imageUrl : '/cafe-main.jpg',
+            description: idx === 0 
+              ? 'คาเฟ่เรือนไม้ 2 ชั้น บรรยากาศร่มรื่น โปร่งสบาย เสิร์ฟกาแฟโรบัสต้าภูพานคั่วสด เมนู Specialty Coffee, Slow bar บาริสต้ามืออาชีพ มีมุมทำงานพร้อม Wi-Fi และที่จอดรถสะดวกสบาย'
+              : 'สาขาให้บริการเครื่องดื่มคุณภาพ เมล็ดกาแฟโรบัสต้าภูพานคั่วสด ชงเสิร์ฟรวดเร็ว พร้อมบริการ Takeaway และเดลิเวอรี',
+            googleMapsDirectionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+            googleMapsSearchUrl: `https://maps.google.com/?q=${lat},${lng}`,
+            embedMapUrl: `https://maps.google.com/maps?q=${lat},${lng}&hl=th&z=16&output=embed`
+          };
+        });
+        setBranchesList(formatted);
+      }
+    }).catch((e) => console.warn('Could not load live branches:', e));
+  }, []);
+
+  const realStore = branchesList[selectedBranchIndex] || defaultBranches[0];
 
   const copyCoordinates = () => {
     navigator.clipboard.writeText(realStore.coordinates);
@@ -534,11 +598,11 @@ export default function CoffeeHubHomepage() {
                     แผนที่และตำแหน่งร้าน 456 Coffee
                   </h2>
                   <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    ตำแหน่งร้านจริง
+                    ข้อมูลจริง ({branchesList.length} สาขา)
                   </span>
                 </div>
                 <p className="text-xs text-[#A89887]">
-                  สาขาหลัก อำเภอเมืองกาฬสินธุ์ (ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ ถนนทางหลวง 213)
+                  {realStore.shortAddress} ({realStore.hours})
                 </p>
               </div>
             </div>
@@ -575,6 +639,30 @@ export default function CoffeeHubHomepage() {
               </button>
             </div>
           </div>
+
+          {/* Branch Switcher Buttons */}
+          {branchesList.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs text-[#A89887] font-semibold flex items-center gap-1.5 mr-1">
+                <Coffee className="w-3.5 h-3.5 text-orange-400" /> เลือกสาขาที่ต้องการดู:
+              </span>
+              {branchesList.map((branch, idx) => (
+                <button
+                  key={branch.id || idx}
+                  type="button"
+                  onClick={() => setSelectedBranchIndex(idx)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    selectedBranchIndex === idx
+                      ? 'bg-[#EA580C] text-white shadow-md shadow-orange-950/40 scale-105'
+                      : 'bg-white/5 hover:bg-white/10 text-[#C8B8A6] border border-white/10'
+                  }`}
+                >
+                  <MapPin className="w-3 h-3" />
+                  <span>{branch.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Map & Real Location Card Container (2-Column Desktop, Stacked Mobile) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">

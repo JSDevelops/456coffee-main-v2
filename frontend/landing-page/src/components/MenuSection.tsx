@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Coffee, Flame, Sparkles, ShoppingBag, Check } from 'lucide-react';
+import { fetchMenuApi, PublicMenuItem } from '../api';
 
 interface MenuItem {
   id: string;
@@ -13,8 +14,10 @@ interface MenuItem {
 
 export function MenuSection() {
   const [activeTab, setActiveTab] = useState<'all' | 'coffee' | 'tea' | 'bakery' | 'beans'>('all');
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const menuItems: MenuItem[] = [
+  const fallbackMenuItems: MenuItem[] = [
     {
       id: 'm1',
       name: 'Phu Phan Dirty',
@@ -105,6 +108,45 @@ export function MenuSection() {
       tag: 'Travel Friendly',
     },
   ];
+
+  useEffect(() => {
+    async function loadMenu() {
+      try {
+        const liveMenu = await fetchMenuApi();
+        if (liveMenu && liveMenu.length > 0) {
+          const mapped: MenuItem[] = liveMenu.map((m, idx) => {
+            let cat: 'coffee' | 'tea' | 'bakery' | 'beans' = 'coffee';
+            const catName = m.category?.name?.toLowerCase() || '';
+            const itemName = m.name.toLowerCase();
+            if (catName.includes('tea') || catName.includes('ชา') || itemName.includes('ชา') || itemName.includes('โกโก้')) {
+              cat = 'tea';
+            } else if (catName.includes('bakery') || catName.includes('เบเกอรี่') || catName.includes('เค้ก') || itemName.includes('ขนม')) {
+              cat = 'bakery';
+            } else if (catName.includes('bean') || catName.includes('เมล็ด') || itemName.includes('เมล็ด') || itemName.includes('ดริป')) {
+              cat = 'beans';
+            }
+            return {
+              id: m.id,
+              name: m.name,
+              category: cat,
+              price: m.price,
+              description: m.description || `เครื่องดื่มสดชื่นชงสดใหม่ คุณภาพระดับพรีเมียมจาก 456 Coffee`,
+              tag: idx < 3 ? 'Best Seller' : undefined,
+              isPopular: idx < 4,
+            };
+          });
+          setMenuItems(mapped);
+        } else {
+          setMenuItems(fallbackMenuItems);
+        }
+      } catch {
+        setMenuItems(fallbackMenuItems);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadMenu();
+  }, []);
 
   const filteredItems = activeTab === 'all' 
     ? menuItems 
