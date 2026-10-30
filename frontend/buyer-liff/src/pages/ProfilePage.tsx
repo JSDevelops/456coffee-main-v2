@@ -3,23 +3,31 @@ import { motion } from 'framer-motion';
 import {
   User, MapPin, Gift, History, LogOut, ChevronRight, Receipt, Sparkles, Coffee,
 } from 'lucide-react';
-import { memberTier, type Member, type TabId } from '../types';
+import { memberTier, type Member, type Order, type TabId } from '../types';
 import PointHistorySheet from '../sheets/PointHistorySheet';
+import StampCard from '../components/StampCard';
 
 interface Props {
   member: Member | null;
+  recentOrders?: Order[];
   onNavigate: (t: TabId) => void;
   onOpenAddresses: () => void;
   onOpenAuth: () => void;
   onLogout: () => void;
 }
 
-export default function ProfilePage({ member, onNavigate, onOpenAddresses, onOpenAuth, onLogout }: Props) {
+export default function ProfilePage({ member, recentOrders = [], onNavigate, onOpenAddresses, onOpenAuth, onLogout }: Props) {
   const [showHistory, setShowHistory] = useState(false);
 
   const tier = useMemo(() => memberTier(member?.points || 0), [member?.points]);
   const points = member?.points || 0;
   const progress = Math.min(100, ((points - tier.min) / (tier.next - tier.min)) * 100);
+
+  const completedOrdersCount = useMemo(() => {
+    const historyCount = member?.pointHistory?.filter((h) => h.delta > 0).length || 0;
+    const ordersCount = recentOrders.filter((o) => o.status === 'COMPLETED').length || 0;
+    return Math.max(historyCount, ordersCount);
+  }, [member?.pointHistory, recentOrders]);
 
   const isLoggedIn = !!member;
 
@@ -92,11 +100,17 @@ export default function ProfilePage({ member, onNavigate, onOpenAddresses, onOpe
 
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-hairline">
-            <Stat label="ออเดอร์" value={String(member?.pointHistory?.filter(h => h.delta > 0).length || 0)} />
+            <Stat label="ออเดอร์" value={String(completedOrdersCount)} />
             <Stat label="ที่อยู่" value={String(member?.addresses?.length || 0)} />
             <Stat label="ระดับ" value={tier.name} />
           </div>
         </div>
+
+        {/* Digital Stamp Pass */}
+        <StampCard
+          completedOrdersCount={completedOrdersCount}
+          onRedeemReward={() => setShowHistory(true)}
+        />
 
         {/* Saved addresses summary */}
         <button

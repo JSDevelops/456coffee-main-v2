@@ -19,11 +19,9 @@ const AddressFormSheet       = lazy(() => import('./sheets/AddressSheets').then(
 const AddressManagementSheet = lazy(() => import('./sheets/AddressSheets').then((m) => ({ default: m.AddressManagementSheet })));
 const PromptPayQrSheet       = lazy(() => import('./sheets/PromptPayQrSheet'));
 
-import { auth } from './api';
+import { auth, API_BASE as API } from './api';
 import { swr, cachedFetch, invalidate, getCached, setCached } from './lib/cache';
 import type { Branch, CartItem, MemberAddress, MenuItem, MenuOption, Member, Order, TabId } from './types';
-
-const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
 
 /** Lightweight loader shown while a lazy page chunk arrives. */
 function PageFallback() {
@@ -325,6 +323,7 @@ export default function App() {
               {tab === 'profile' && (
                 <ProfilePage
                   member={member}
+                  recentOrders={recentOrders}
                   onNavigate={setTab}
                   onOpenAddresses={() => setIsAddressManageOpen(true)}
                   onOpenAuth={() => setIsAuthOpen(true)}

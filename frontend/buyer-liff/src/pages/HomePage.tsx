@@ -8,6 +8,7 @@ import {
   Crown,
   Gift,
   MapPin,
+  Navigation,
   ReceiptText,
   RefreshCw,
   Search,
@@ -22,6 +23,7 @@ import { Skeleton, SectionTitle } from '../components/ui/Primitives';
 import { useSWR, preloadImages } from '../lib/cache';
 import { memberTier, type Branch, type Category, type MenuItem, type Member, type Order, type TabId } from '../types';
 import { API_BASE as API } from '../api';
+import { getUserLocation, calculateDistanceKm, formatDistance, type Coordinates } from '../lib/geo';
 
 interface Announcement {
   id: string;
@@ -62,6 +64,13 @@ export default function HomePage({
   const { data: announcementsData } = useSWR<Announcement[]>(`${API}/announcements/customer`, { ttl: 60_000 });
 
   const [selectedAnn, setSelectedAnn] = useState<Announcement | null>(null);
+  const [userCoords, setUserCoords] = useState<Coordinates | null>(null);
+
+  useEffect(() => {
+    getUserLocation().then((coords) => {
+      if (coords) setUserCoords(coords);
+    });
+  }, []);
 
   const branches = branchesData ?? [];
   const featured = useMemo(() => (menuData ?? []).slice(0, 8), [menuData]);
@@ -83,9 +92,62 @@ export default function HomePage({
     ? rawDisplay.replace(/\s*\(mock\)\s*/gi, '').trim() || 'ลูกค้า 456 Coffee'
     : rawDisplay || 'ลูกค้า 456 Coffee';
   const picture = (member as any)?.pictureUrl || (user as any)?.pictureUrl;
-  const openBranches = branches.filter((b) => b.isOpen);
+
+  // Branches sorted with distance awareness
+  const branchesWithDistance = useMemo(() => {
+    return branches.map((b) => {
+      let distanceKm: number | null = null;
+      if (userCoords && b.latitude && b.longitude) {
+        distanceKm = calculateDistanceKm(userCoords.latitude, userCoords.longitude, b.latitude, b.longitude);
+      }
+      return { ...b, distanceKm };
+    }).sort((a, b) => {
+      if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1;
+      if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm;
+      return 0;
+    });
+  }, [branches, userCoords]);
+
+  const openBranches = branchesWithDistance.filter((b) => b.isOpen);
+  const nearestBranch = openBranches[0] || branchesWithDistance[0] || null;
   const readyMenuCount = featured.filter((m) => m.status === 'AVAILABLE').length;
-  const firstBranch = openBranches[0] || branches[0];
+
+  // Favorite Cup logic (P1)
+  const favoriteCup = useMemo(() => {
+    if (recentOrders.length > 0 && recentOrders[0].items?.length) {
+      const lastOrder = recentOrders[0];
+      const item = lastOrder.items[0];
+      let opts: any[] = [];
+      try { opts = JSON.parse(item.selectedOptions || '[]'); } catch {}
+      return {
+        isPreviousOrder: true,
+        order: lastOrder,
+        name: item.productName || item.product?.name || 'กาแฟแก้วโปรด',
+        price: item.price || lastOrder.totalAmount,
+        optionsText: opts.map((o: any) => o.label || o.name).filter(Boolean).join(' · '),
+        imageUrl: item.product?.imageUrl || null,
+      };
+    }
+    const topItem = featured[0] || null;
+    if (topItem) {
+      return {
+        isPreviousOrder: false,
+        item: topItem,
+        name: topItem.name,
+        price: topItem.price,
+        optionsText: topItem.description || 'เมนูซิกเนเจอร์ยอดนิยม 456 Atelier',
+        imageUrl: topItem.imageUrl,
+      };
+    }
+    return null;
+  }, [recentOrders, featured]);
+
+  // Digital Stamp count
+  const completedStamps = useMemo(() => {
+    const historyCount = member?.pointHistory?.filter((h) => h.delta > 0).length || 0;
+    const ordersCount = recentOrders.filter((o) => o.status === 'COMPLETED').length || 0;
+    return (Math.max(historyCount, ordersCount) % 10);
+  }, [member?.pointHistory, recentOrders]);
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
@@ -125,7 +187,7 @@ export default function HomePage({
     },
     {
       label: 'เลือกสาขา',
-      desc: firstBranch?.name || 'ดูสาขาที่เปิด',
+      desc: nearestBranch ? `${nearestBranch.name}${nearestBranch.distanceKm !== null ? ` · ${formatDistance(nearestBranch.distanceKm)}` : ''}` : 'ดูสาขาที่เปิด',
       icon: StoreIcon,
       className: 'buyer-action-blue',
       onClick: () => {
@@ -279,6 +341,77 @@ export default function HomePage({
         </div>
       </section>
 
+      {/* MY FAVORITE CUP (1-TAP QUICK REORDER) */}
+      {favoriteCup && (
+        <section className="relative px-5 pt-5">
+          <div
+            className="relative overflow-hidden rounded-[2rem] p-5 luxe-border shadow-deep"
+            style={{
+              background: 'linear-gradient(135deg, #1c1510 0%, #2b1e15 50%, #150f0a 100%)',
+              border: '1px solid rgba(245, 179, 1, 0.35)',
+            }}
+          >
+            <span className="aurora pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[var(--gold-1)]/20 blur-2xl" />
+            <span className="aurora pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-[#ea580c]/15 blur-2xl" />
+
+            <div className="relative flex items-center justify-between gap-3 mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--gold-1)] bg-white/10 ring-1 ring-white/15">
+                <Sparkles size={11} className="text-[var(--gold-1)]" />
+                {favoriteCup.isPreviousOrder ? '✦ แก้วโปรดของคุณ · Favorite Cup' : '✦ เมนูซิกเนเจอร์ · Signature Must-Try'}
+              </span>
+              <span className="text-[12px] font-black text-[var(--gold-1)] font-display">
+                ฿{favoriteCup.price}
+              </span>
+            </div>
+
+            <div className="relative flex items-center gap-3.5">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/20">
+                {favoriteCup.imageUrl ? (
+                  <img src={favoriteCup.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[var(--gold-1)]">
+                    <Coffee size={28} />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display truncate text-[14px] font-extrabold text-white">
+                  {favoriteCup.name}
+                </h3>
+                <p className="mt-0.5 truncate text-[10.5px] font-semibold text-white/70">
+                  {favoriteCup.optionsText}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative mt-4">
+              {favoriteCup.isPreviousOrder ? (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onReorder(favoriteCup.order)}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[11.5px] font-black text-stone-950 shadow-gold"
+                  style={{ background: 'linear-gradient(90deg, #ffd166 0%, #f5b301 50%, #ff9b1c 100%)' }}
+                >
+                  <RefreshCw size={15} />
+                  <span>สั่งซ้ำแก้วนี้เลย ⚡ (1-Tap Reorder)</span>
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onOpenMenu(favoriteCup.item)}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[11.5px] font-black text-stone-950 shadow-gold"
+                  style={{ background: 'linear-gradient(90deg, #ffd166 0%, #f5b301 50%, #ff9b1c 100%)' }}
+                >
+                  <Coffee size={15} />
+                  <span>ลองแก้วนี้เลย ✦ (สั่งทันที)</span>
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* MEMBER CARD */}
       <section className="relative mt-6 px-5">
         <div className="luxe-border relative rounded-[1.9rem] bg-white p-5 shadow-soft overflow-hidden">
@@ -331,6 +464,31 @@ export default function HomePage({
               <p className="text-[9.5px] font-black uppercase tracking-widest text-[var(--lavender)]">เมนูพร้อมขาย</p>
               <p className="font-display mt-1 text-xl font-extrabold ink">{readyMenuCount}</p>
             </div>
+          </div>
+
+          {/* Stamp Card Shortcut / Progress Banner */}
+          <div
+            onClick={() => onNavigate('profile')}
+            className="relative mt-4 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 p-3.5 text-white ring-1 ring-white/10 active:scale-[0.99] transition-transform cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#ea580c] to-[#f97316] text-white shadow-soft">
+                <Gift size={16} />
+              </span>
+              <div>
+                <p className="text-[10.5px] font-extrabold text-white">
+                  แสตมป์ดิจิทัล {completedStamps}/10 แก้ว
+                </p>
+                <p className="text-[9.5px] font-semibold text-white/70">
+                  {completedStamps === 0 && (member?.pointHistory?.length || 0) === 0
+                    ? 'สะสมครบ 10 แก้ว ฟรี 1 แก้ว!'
+                    : `สะสมอีก ${10 - completedStamps} แก้ว เพื่อรับเครื่องดื่มฟรี!`}
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-black text-[var(--gold-1)]">
+              ดูบัตร <ChevronRight size={14} />
+            </span>
           </div>
         </div>
       </section>
@@ -473,33 +631,50 @@ export default function HomePage({
         <div className="space-y-3">
           {loading
             ? [0, 1].map((i) => <Skeleton key={i} className="h-20 rounded-[1.6rem]" />)
-            : branches.map((branch) => (
-                <motion.button
-                  key={branch.id}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => onSelectBranch(branch)}
-                  className="flex w-full items-center gap-3 rounded-[1.6rem] bg-white p-3 text-left hairline shadow-soft"
-                >
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[var(--ink)] to-[var(--espresso-2)] text-[var(--gold-1)]">
-                    <StoreIcon size={19} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="font-display truncate text-[11.5px] font-extrabold ink">{branch.name}</span>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${
-                        branch.isOpen ? 'bg-[var(--success-soft)] text-[var(--success)]' : 'bg-stone-100 text-stone-500'
-                      }`}>
-                        {branch.isOpen ? '● เปิด' : 'ปิด'}
+            : branchesWithDistance.map((branch, idx) => {
+                const isNearest = idx === 0 && branch.distanceKm !== null && branch.isOpen;
+
+                return (
+                  <motion.button
+                    key={branch.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onSelectBranch(branch)}
+                    className={`flex w-full items-center gap-3 rounded-[1.6rem] bg-white p-3 text-left hairline shadow-soft transition-all ${
+                      isNearest ? 'ring-2 ring-[var(--gold-1)]/50' : ''
+                    }`}
+                  >
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[var(--ink)] to-[var(--espresso-2)] text-[var(--gold-1)]">
+                      <StoreIcon size={19} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 flex-wrap">
+                        <span className="font-display truncate text-[11.5px] font-extrabold ink">{branch.name}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${
+                          branch.isOpen ? 'bg-[var(--success-soft)] text-[var(--success)]' : 'bg-stone-100 text-stone-500'
+                        }`}>
+                          {branch.isOpen ? '● เปิด' : 'ปิด'}
+                        </span>
+                        {branch.distanceKm !== null && (
+                          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[9px] font-bold text-stone-700">
+                            <MapPin size={9} className="text-[var(--gold-1)]" />
+                            {formatDistance(branch.distanceKm)}
+                          </span>
+                        )}
+                        {isNearest && (
+                          <span className="shrink-0 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[8.5px] font-black text-amber-800">
+                            📍 ใกล้คุณที่สุด
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-1 flex items-center gap-1.5 truncate text-[10.5px] font-bold ink-mute">
+                        <MapPin size={11} />
+                        <span className="truncate">{branch.address || 'รายละเอียดสถานที่'}</span>
                       </span>
                     </span>
-                    <span className="mt-1 flex items-center gap-1.5 truncate text-[10.5px] font-bold ink-mute">
-                      <MapPin size={11} />
-                      <span className="truncate">{branch.address || 'รายละเอียดสถานที่'}</span>
-                    </span>
-                  </span>
-                  <ChevronRight size={18} className="ink-mute" />
-                </motion.button>
-              ))}
+                    <ChevronRight size={18} className="ink-mute shrink-0" />
+                  </motion.button>
+                );
+              })}
         </div>
       </section>
       {/* ANNOUNCEMENT DETAIL MODAL */}

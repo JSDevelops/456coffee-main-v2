@@ -122,10 +122,18 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
+function getEstimatedWaitMinutes(order: Order): number {
+  if (order.status === 'PREPARING') return 3;
+  const q = order.queueNo || 1;
+  return Math.max(3, Math.min(25, ((q - 1) % 7 + 1) * 3));
+}
+
 function ActiveOrderCard({ order, onOpen }: { order: Order; onOpen: () => void }) {
   const cfg = STATUS_CFG[order.status];
   const stepIdx = Math.max(0, cfg?.step ?? 0);
   const totalSteps = STEPS.length;
+  const isWaiting = ['PENDING', 'PAID', 'PREPARING'].includes(order.status);
+  const estMins = getEstimatedWaitMinutes(order);
 
   return (
     <motion.button
@@ -158,6 +166,19 @@ function ActiveOrderCard({ order, onOpen }: { order: Order; onOpen: () => void }
               }`}
             />
           ))}
+        </div>
+      )}
+
+      {/* Estimated Wait Time Badge */}
+      {isWaiting && (
+        <div className="mb-3 flex items-center gap-2 rounded-2xl bg-amber-500/10 px-3 py-1.5 border border-amber-500/20 text-amber-800">
+          <Clock size={13} className="text-amber-600 animate-pulse shrink-0" />
+          <span className="text-[10.5px] font-extrabold">
+            รอประมาณ ~{estMins} นาที
+          </span>
+          <span className="ml-auto text-[9.5px] font-bold text-amber-700/80">
+            {order.status === 'PREPARING' ? 'กำลังชงแก้วของคุณ' : `คิวที่ #${order.queueNo ?? '—'}`}
+          </span>
         </div>
       )}
 
@@ -236,6 +257,21 @@ function OrderDetail({ order, onBack }: { order: Order; onBack: () => void }) {
             <span className="w-2 h-2 rounded-full bg-[var(--gold-1)] pulse-ring" />
             {cfg?.label || order.status}
           </p>
+
+          {['PENDING', 'PAID', 'PREPARING'].includes(order.status) && (
+            <div className="relative mt-4 flex items-center gap-2.5 rounded-2xl bg-white/16 p-3 ring-1 ring-white/25 backdrop-blur">
+              <Clock size={18} className="text-[var(--gold-1)] animate-pulse shrink-0" />
+              <div>
+                <p className="text-[12px] font-extrabold text-white">
+                  รอประมาณ ~{getEstimatedWaitMinutes(order)} นาที
+                </p>
+                <p className="text-[10px] font-medium text-white/80">
+                  {order.status === 'PREPARING' ? 'บาริสต้ากำลังรังสรรค์แก้วของคุณ' : 'รอคิวเตรียมเครื่องดื่ม'}
+                </p>
+              </div>
+            </div>
+          )}
+
           <Coffee size={140} className="absolute -right-4 -bottom-6 text-white/[0.07] rotate-12" />
         </div>
 
