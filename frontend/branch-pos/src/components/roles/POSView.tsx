@@ -141,9 +141,20 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
   const [posAnnouncements, setPosAnnouncements] = useState<any[]>([]);
   const [activeAnnouncement, setActiveAnnouncement] = useState<any | null>(null);
 
-  // Fetch branch announcements from HQ
+  // Dynamic Sales Channels from HQ Settings
+  const [salesChannels, setSalesChannels] = useState<any[]>([
+    { id: 'STORE',  label: 'หน้าร้าน',  icon: '🏪', color: '#7c543c', enabled: true,  defaultMarkupPercent: 0 },
+    { id: 'GRAB',   label: 'Grab',      icon: '🟢', color: '#00b14f', enabled: true,  defaultMarkupPercent: 15 },
+    { id: 'LINE',   label: 'LINE MAN',  icon: '🟡', color: '#06c755', enabled: true,  defaultMarkupPercent: 10 },
+    { id: 'SHOPEE', label: 'Shopee',    icon: '🛍️', color: '#ee4d2d', enabled: false, defaultMarkupPercent: 15 },
+    { id: 'BOOTH',  label: 'ออกบูธ',    icon: '🎪', color: '#7c3aed', enabled: false, defaultMarkupPercent: 0 },
+    { id: 'OTHER',  label: 'อื่นๆ',      icon: '📦', color: '#64748b', enabled: false, defaultMarkupPercent: 0 },
+  ]);
+
+  // Fetch branch announcements & sales channels config from HQ
   useEffect(() => {
     if (!branch?.id) return;
+    // Announcements
     fetch(`${API_BASE}/announcements/branch/${branch.id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -152,6 +163,21 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
         }
       })
       .catch((err) => console.warn('Could not load announcements for POS:', err));
+
+    // Sales Channels Config
+    fetch(`${API_BASE}/settings`)
+      .then((r) => r.json())
+      .then((settings) => {
+        if (settings && settings['salesChannels.config']) {
+          try {
+            const parsed = JSON.parse(settings['salesChannels.config']);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setSalesChannels(parsed);
+            }
+          } catch { }
+        }
+      })
+      .catch(() => { });
   }, [branch?.id]);
 
   // Fetch menu with Cache-First strategy — loads instantly from LocalStorage, then revalidates
@@ -422,7 +448,17 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
     }
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  // Determine active channel config and automatic markup rate (e.g. Grab +15%, LINE MAN +10%)
+  const activeChannel = useMemo(() => {
+    return salesChannels.find((c) => c.id === (checkoutData as any).platform) || salesChannels[0];
+  }, [salesChannels, checkoutData]);
+
+  const channelMarkupPercent = activeChannel?.defaultMarkupPercent || 0;
+  const rawSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  // Auto-calculated channel markup (rounded to whole Baht for clean retail price)
+  const channelMarkupAmount = Math.round((rawSubtotal * channelMarkupPercent) / 100);
+  const subtotal = rawSubtotal + channelMarkupAmount;
+
   const discount = (checkoutData as any).appliedPromo?.discountAmount ?? 0;
   const total = Math.max(0, subtotal - discount);
   const cashNum = parseFloat(cashReceived || '0');
@@ -1209,8 +1245,16 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
       <AnimatePresence>
         {showCheckout && (
           <CheckoutModal
-            cart={cart} subtotal={subtotal} total={total}
-            data={checkoutData} cashReceived={cashReceived} change={change}
+            cart={cart}
+            rawSubtotal={rawSubtotal}
+            channelMarkupAmount={channelMarkupAmount}
+            channelMarkupPercent={channelMarkupPercent}
+            subtotal={subtotal}
+            total={total}
+            channels={salesChannels}
+            data={checkoutData}
+            cashReceived={cashReceived}
+            change={change}
             isPosting={isPosting}
             onChangeData={(patch) => setCheckoutData((prev) => ({ ...prev, ...patch }))}
             onCashChange={setCashReceived}
@@ -2382,8 +2426,12 @@ function FieldInput({
 // ════════════════════════════════════════════════════════════════════════════
 function CheckoutModal({
   cart,
+  rawSubtotal,
+  channelMarkupAmount,
+  channelMarkupPercent,
   subtotal,
   total,
+  channels,
   data,
   cashReceived,
   change,
@@ -2394,19 +2442,32 @@ function CheckoutModal({
   onSubmit,
 }: {
   cart: CartItem[];
+  rawSubtotal: number;
+  channelMarkupAmount: number;
+  channelMarkupPercent: number;
   subtotal: number;
   total: number;
-  data: { customerName: string; paymentMethod: string; note: string };
+  channels: any[];
+  data: { customerName: string; paymentMethod: string; note: string; platform?: string; appliedPromo?: any };
   cashReceived: string;
   change: number;
   isPosting: boolean;
-  onChangeData: (patch: Partial<{ customerName: string; paymentMethod: string; note: string }>) => void;
+  onChangeData: (patch: Partial<{ customerName: string; paymentMethod: string; note: string; platform?: string; appliedPromo?: any }>) => void;
   onCashChange: (v: string) => void;
   onClose: () => void;
   onSubmit: () => void;
 }) {
   const isCash = data.paymentMethod === 'CASH';
   const cashOk = !isCash || (parseFloat(cashReceived || '0') >= total);
+
+  // Filter channels to only show enabled ones
+  const availableChannels = channels && channels.length > 0
+    ? channels.filter((c) => c.enabled !== false)
+    : [
+        { id: 'STORE',  label: 'หน้าร้าน', icon: '🏪', color: '#7c543c', defaultMarkupPercent: 0 },
+        { id: 'GRAB',   label: 'Grab',      icon: '🟢', color: '#00b14f', defaultMarkupPercent: 15 },
+        { id: 'LINE',   label: 'LINE MAN',  icon: '🟡', color: '#06c755', defaultMarkupPercent: 10 },
+      ];
 
   const press = (digit: string) => {
     if (isPosting) return;
@@ -2503,34 +2564,46 @@ function CheckoutModal({
           <div className="space-y-2 mb-4">
             {/* ── ช่องทางสั่งซื้อ ── */}
             <div>
-              <label className="text-[9px] font-black uppercase tracking-widest text-[#7c543c]/60 mb-1.5 block">
-                ช่องทางสั่งซื้อ
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-[#7c543c]/60 block">
+                  ช่องทางสั่งซื้อ
+                </label>
+                {channelMarkupPercent > 0 && (
+                  <span className="text-[9px] font-black text-[#ea580c] bg-[#ea580c]/10 px-2 py-0.5 rounded-full">
+                    Markup +{channelMarkupPercent}%
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-3 gap-1.5">
-                {([
-                  { id: 'STORE',     label: 'หน้าร้าน', icon: '🏪', color: '#7c543c' },
-                  { id: 'GRAB',      label: 'Grab',      icon: '🟢', color: '#00b14f' },
-                  { id: 'LINE',      label: 'LINE MAN',  icon: '🟡', color: '#06c755' },
-                  { id: 'SHOPEE', label: 'Shopee', icon: '🛍️', color: '#ee4d2d' },
-                  { id: 'BOOTH',     label: 'ออกบูธ',   icon: '🎪', color: '#7c3aed' },
-                  { id: 'OTHER',     label: 'อื่นๆ',     icon: '📦', color: '#64748b' },
-                ] as const).map((p) => {
+                {availableChannels.map((p: any) => {
                   const active = (data as any).platform === p.id;
+                  const markup = p.defaultMarkupPercent || 0;
                   return (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => onChangeData({ platform: p.id } as any)}
-                      className="flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-black transition-all"
+                      className="relative flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-[10px] font-black transition-all"
                       style={{
-                        background: active ? p.color : '#f3ece1',
+                        background: active ? (p.color || '#7c543c') : '#f3ece1',
                         color: active ? '#fff' : '#7c543c',
-                        boxShadow: active ? `0 3px 8px ${p.color}40` : 'none',
-                        transform: active ? 'scale(1.04)' : 'scale(1)',
+                        boxShadow: active ? `0 3px 8px ${(p.color || '#7c543c')}40` : 'none',
+                        transform: active ? 'scale(1.03)' : 'scale(1)',
                       }}
                     >
-                      <span className="text-lg leading-none">{p.icon}</span>
-                      <span className="leading-tight text-center">{p.label}</span>
+                      {markup > 0 && (
+                        <span
+                          className="absolute -top-1.5 -right-1 text-[8px] font-black px-1.5 py-0.2 rounded-full shadow-sm"
+                          style={{
+                            background: active ? '#ffffff' : '#ea580c',
+                            color: active ? (p.color || '#ea580c') : '#ffffff',
+                          }}
+                        >
+                          +{markup}%
+                        </span>
+                      )}
+                      <span className="text-lg leading-none">{p.icon || '📦'}</span>
+                      <span className="leading-tight text-center truncate max-w-full">{p.label}</span>
                     </button>
                   );
                 })}
@@ -2578,9 +2651,15 @@ function CheckoutModal({
             style={{ background: 'linear-gradient(135deg, #ea580c, #7c543c)', color: '#ffffff' }}
           >
             <div className="flex justify-between text-xs font-bold opacity-90">
-              <span>ยอดย่อย</span>
-              <span className="num">฿{subtotal.toLocaleString()}</span>
+              <span>ราคาสินค้าปกติ</span>
+              <span className="num">฿{rawSubtotal.toLocaleString()}</span>
             </div>
+            {channelMarkupAmount > 0 && (
+              <div className="flex justify-between text-xs font-bold" style={{ color: '#fed7aa' }}>
+                <span>🛵 ปรับราคาตามช่องทาง (+{channelMarkupPercent}%)</span>
+                <span className="num">+฿{channelMarkupAmount.toLocaleString()}</span>
+              </div>
+            )}
             {(data as any).appliedPromo && (
               <div className="flex justify-between text-xs font-bold" style={{ color: '#bbf7d0' }}>
                 <span>🏷 {(data as any).appliedPromo.name}</span>

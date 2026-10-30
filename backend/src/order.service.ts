@@ -134,7 +134,7 @@ export class OrderService {
 
     try {
       const method = paymentMethod || 'CASH';
-      const isImmediateCashSale = data.platform === 'STORE' && method === 'CASH';
+      const isImmediateCashSale = method === 'CASH';
       const initialOrderStatus: OrderStatus = isImmediateCashSale ? 'PAID' : 'PENDING';
       const initialPaymentStatus: PaymentStatus = isImmediateCashSale ? 'PAID' : 'UNPAID';
       const qrMeta =
