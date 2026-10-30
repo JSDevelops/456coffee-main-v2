@@ -11,6 +11,7 @@ import { UserService } from './user.service';
 import { Prisma, OrderStatus, PaymentStatus } from '@prisma/client';
 import type { JwtPayload } from './auth/jwt-payload';
 import { PaymentService } from './payment.service';
+import { LineNotificationService } from './line-notification.service';
 
 export interface CreateOrderDto {
   branchId: string;
@@ -44,6 +45,7 @@ export class OrderService {
     private inventory: InventoryService,
     private userService: UserService,
     private paymentService: PaymentService,
+    private lineNotification: LineNotificationService,
   ) {}
 
   // ─── Order Include ──────────────────────────────────────────────────────
@@ -218,6 +220,11 @@ export class OrderService {
       // Notify Branch Real-time
       this.gateway.notifyNewOrder(branchId, order);
 
+      // Async LINE push notification (non-blocking)
+      void this.lineNotification.sendOrderCreated(order).catch((err) => {
+        console.warn(`[LineNotification] Failed to send order created push:`, err);
+      });
+
       // Audit Log
       await this.prisma.auditLog.create({
         data: {
@@ -316,6 +323,18 @@ export class OrderService {
 
     // Notify clients
     this.gateway.notifyUpdateOrder(order.branchId, order);
+
+    // Async LINE push notification on status transitions (non-blocking)
+    if (status === 'READY_FOR_PICKUP' || status === 'READY') {
+      void this.lineNotification.sendOrderReady(order).catch((err) => {
+        console.warn(`[LineNotification] Failed to send order ready push:`, err);
+      });
+    } else if (status === 'DISPATCHED') {
+      void this.lineNotification.sendOrderDispatched(order).catch((err) => {
+        console.warn(`[LineNotification] Failed to send order dispatched push:`, err);
+      });
+    }
+
     return order;
   }
 
@@ -361,6 +380,14 @@ export class OrderService {
     }
 
     this.gateway.notifyUpdateOrder(updatedOrder.branchId, updatedOrder);
+
+    // If order was just marked paid and was not already paid, send LINE confirmation
+    if (nextStatus === 'PAID' && !wasAlreadyPaid) {
+      void this.lineNotification.sendOrderCreated(updatedOrder).catch((err) => {
+        console.warn(`[LineNotification] Failed to send order paid push:`, err);
+      });
+    }
+
     return updatedOrder;
   }
 
