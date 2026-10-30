@@ -21,8 +21,7 @@ import CategoryRail from '../components/CategoryRail';
 import { Skeleton, SectionTitle } from '../components/ui/Primitives';
 import { useSWR, preloadImages } from '../lib/cache';
 import { memberTier, type Branch, type Category, type MenuItem, type Member, type Order, type TabId } from '../types';
-
-const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
+import { API_BASE as API } from '../api';
 
 interface Announcement {
   id: string;

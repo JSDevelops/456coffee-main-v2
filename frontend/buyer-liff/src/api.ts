@@ -11,6 +11,7 @@ const defaultApi = typeof window !== 'undefined' && window.location.hostname !==
   : 'http://localhost:5001';
 
 export const API_BASE = `${import.meta.env.VITE_API_URL || defaultApi}/api`;
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || defaultApi;
 
 const TOKEN_KEY = 'authToken';
 

@@ -8,9 +8,7 @@ import { Skeleton, EmptyState, Badge } from '../components/ui/Primitives';
 import TopBar, { BackButton, IconButton } from '../components/TopBar';
 import { getCached, setCached } from '../lib/cache';
 import { STATUS_CFG, TONE_BG, type Order } from '../types';
-
-const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { API_BASE as API, SOCKET_URL } from '../api';
 
 const STEPS = [
   { key: 'PENDING',   label: 'รับออเดอร์',    icon: Receipt },

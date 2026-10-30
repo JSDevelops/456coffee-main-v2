@@ -10,8 +10,7 @@ import CheckoutSheet from '../sheets/CheckoutSheet';
 import { AddressPickerSheet } from '../sheets/AddressSheets';
 import { useSWR } from '../lib/cache';
 import type { Branch, CartItem, MemberAddress, Member, TabId } from '../types';
-
-const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api`;
+import { API_BASE as API } from '../api';
 
 interface Props {
   cart: CartItem[];
