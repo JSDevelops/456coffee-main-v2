@@ -154,19 +154,41 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
       .catch((err) => console.warn('Could not load announcements for POS:', err));
   }, [branch?.id]);
 
-  // Fetch menu lazily — uses the branch-scoped endpoint so per-branch
-  // availability overrides (set by the manager) are respected.
+  // Fetch menu with Cache-First strategy — loads instantly from LocalStorage, then revalidates
   useEffect(() => {
-    if (products.length > 0 || !branch?.id) return;
+    if (!branch?.id) return;
+
+    const cacheKeyCats = `pos_cache_cats_${branch.id}`;
+    const cacheKeyMenu = `pos_cache_menu_${branch.id}`;
+
+    // 1. Instant load from cache (Zero latency / Offline ready)
+    try {
+      const cachedCats = localStorage.getItem(cacheKeyCats);
+      const cachedMenu = localStorage.getItem(cacheKeyMenu);
+      if (cachedCats && cachedMenu) {
+        setCategories(JSON.parse(cachedCats));
+        setProducts(JSON.parse(cachedMenu));
+      }
+    } catch { }
+
+    // 2. Fetch fresh data in background and update cache
     Promise.all([
       fetch(`${API_BASE}/categories`).then((r) => r.json()),
       fetch(`${API_BASE}/branches/${branch.id}/menu`).then((r) => r.json()),
     ])
       .then(([cats, prods]) => {
-        setCategories(cats);
-        setProducts(prods);
+        if (Array.isArray(cats) && cats.length > 0) {
+          setCategories(cats);
+          try { localStorage.setItem(cacheKeyCats, JSON.stringify(cats)); } catch { }
+        }
+        if (Array.isArray(prods) && prods.length > 0) {
+          setProducts(prods);
+          try { localStorage.setItem(cacheKeyMenu, JSON.stringify(prods)); } catch { }
+        }
       })
-      .catch((err) => console.error('POS menu fetch failed', err));
+      .catch((err) => {
+        console.warn('POS background menu sync failed, continuing with cache:', err);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branch?.id]);
 

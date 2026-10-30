@@ -42,16 +42,38 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
   return headers;
 }
 
+// In-memory cache for fast tab-switching without network bottleneck
+const memoryCache = new Map<string, { data: any; expiry: number }>();
+const CACHE_TTL_MS = 15000; // 15 seconds fresh cache for instant navigation
+
 async function request<T>(
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
+  options?: { bypassCache?: boolean },
 ): Promise<T> {
+  const isGet = method === 'GET';
+  const cacheKey = `${path}`;
+
+  // Cache hit check for GET
+  if (isGet && !options?.bypassCache) {
+    const cached = memoryCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+      return cached.data as T;
+    }
+  }
+
+  // Clear relevant cache on write actions
+  if (!isGet) {
+    memoryCache.clear();
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: buildHeaders(),
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+
   if (res.status === 401) {
     if (!path.startsWith('/auth/')) {
       const isDemo = auth.getToken() === 'demo-admin-token';
@@ -62,19 +84,29 @@ async function request<T>(
       }
     }
   }
+
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`API ${method} ${path} failed (${res.status}): ${text}`);
   }
+
   const text = await res.text();
-  return text ? (JSON.parse(text) as T) : (undefined as T);
+  const parsedData = text ? (JSON.parse(text) as T) : (undefined as T);
+
+  // Store in cache for GET
+  if (isGet && parsedData !== undefined) {
+    memoryCache.set(cacheKey, { data: parsedData, expiry: Date.now() + CACHE_TTL_MS });
+  }
+
+  return parsedData;
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
+  get: <T>(path: string, options?: { bypassCache?: boolean }) => request<T>('GET', path, undefined, options),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
+  clearCache: () => memoryCache.clear(),
 };
 
 /**
