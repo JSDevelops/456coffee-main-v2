@@ -31,6 +31,7 @@ import {
   Percent,
   Gift,
   Bell,
+  Monitor,
 } from 'lucide-react';
 import { PaginationControls, useClientPagination } from '../Pagination';
 import { API_BASE, SOCKET_URL } from '../../api';
@@ -485,13 +486,17 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
           selectedOptions: item.selectedOptions.map((option) => option.label),
         }));
 
+    const isPaid = viewingReceipt?.payment?.status === 'PAID' || viewingReceipt?.status === 'PAID';
+
     const payload = {
       branchId: branch.id,
       branchName: branch.name,
       status: viewingReceipt
-        ? viewingReceipt.paymentQr
-          ? 'QR_READY'
-          : 'ORDER_CREATED'
+        ? isPaid
+          ? 'ORDER_CREATED'
+          : viewingReceipt.paymentQr
+            ? 'QR_READY'
+            : 'ORDER_CREATED'
         : isPosting
           ? 'PROCESSING'
           : showCheckout
@@ -513,7 +518,7 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
       change,
       orderNo: viewingReceipt?.orderNo || null,
       queueNo: viewingReceipt?.queueNo || null,
-      qr: viewingReceipt?.paymentQr || null,
+      qr: isPaid ? null : (viewingReceipt?.paymentQr || null),
       updatedAt: new Date().toISOString(),
     };
 
@@ -731,6 +736,20 @@ export default function POSView({ branch, orders, onOrderUpdated }: any) {
           <span className="text-[10px] font-black uppercase tracking-widest text-[#7c543c]">Live</span>
           <span className="text-xs font-black num text-[#2d241e] ml-1">{liveOrdersCount}</span>
         </div>
+
+        {/* Customer Secondary Display launcher button */}
+        <button
+          type="button"
+          onClick={() => {
+            const url = `${window.location.origin}${window.location.pathname}#/customer_display${branch?.id ? `?branchId=${branch.id}` : ''}`;
+            window.open(url, 'CustomerDisplay', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
+          }}
+          className="flex items-center gap-1.5 h-9 px-3 rounded-xl shrink-0 transition-all text-xs font-bold text-[#7c543c] hover:text-[#2d241e] hover:bg-[#ece5da] border border-[#ece5da]"
+          title="เปิดจอฝั่งลูกค้า (Customer Secondary Display) ในหน้าต่างแยกสำหรับจอที่สอง"
+        >
+          <Monitor size={14} className="text-[#ea580c]" />
+          <span className="hidden sm:inline">จอฝั่งลูกค้า</span>
+        </button>
       </header>
 
       {/* ── Active Announcement Popup Modal ── */}

@@ -139,11 +139,28 @@ export default function CustomerDisplayView({ branch }: any) {
       };
     }
 
+    const onWindowMsg = (event: MessageEvent) => {
+      if (event.data?.type === 'CUSTOMER_DISPLAY_SYNC' && event.data.payload) {
+        setDisplay({ ...createIdleState(branch), ...event.data.payload });
+      }
+    };
+    window.addEventListener('message', onWindowMsg);
+
     return () => {
       window.removeEventListener('storage', onStorage);
+      window.removeEventListener('message', onWindowMsg);
       channel?.close();
     };
   }, [branch?.id, branch?.name]);
+
+  // Auto-reset back to IDLE 8 seconds after ORDER_CREATED so screen welcomes next customer
+  useEffect(() => {
+    if (display.status !== 'ORDER_CREATED') return;
+    const timer = setTimeout(() => {
+      setDisplay(createIdleState(branch));
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [display.status, branch]);
 
   const itemCount = useMemo(
     () => display.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -428,10 +445,10 @@ export default function CustomerDisplayView({ branch }: any) {
             }}
           >
             <span style={{ width: 24, height: 1, background: PALETTE.goldSoft, display: 'inline-block' }} />
-            {display.qr?.qrImageDataUrl
-              ? 'Scan to Pay'
-              : display.status === 'ORDER_CREATED'
+            {display.status === 'ORDER_CREATED'
               ? 'Order Confirmed'
+              : display.qr?.qrImageDataUrl
+              ? 'Scan to Pay'
               : 'Welcome'}
           </div>
 
@@ -520,6 +537,8 @@ export default function CustomerDisplayView({ branch }: any) {
             <AnimatePresence mode="wait">
               {display.status === 'PROCESSING' ? (
                 <ProcessingBlock key="processing" />
+              ) : display.status === 'ORDER_CREATED' ? (
+                <ConfirmedBlock key="confirmed" orderNo={display.orderNo} queueNo={display.queueNo} />
               ) : display.qr?.qrImageDataUrl ? (
                 <QRBlock
                   key="qr"
@@ -527,8 +546,6 @@ export default function CustomerDisplayView({ branch }: any) {
                   promptpayId={display.qr.promptpayId}
                   promptpayName={display.qr.promptpayName}
                 />
-              ) : display.status === 'ORDER_CREATED' ? (
-                <ConfirmedBlock key="confirmed" orderNo={display.orderNo} queueNo={display.queueNo} />
               ) : display.paymentMethod === 'CASH' && isWaitingPayment ? (
                 <CashBlock
                   key="cash"

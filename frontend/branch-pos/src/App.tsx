@@ -65,12 +65,27 @@ const VALID_ROLES: Role[] = [
 ];
 
 function readRoleFromHash(): Role {
-  const raw = window.location.hash.replace(/^#\/?/, '').toUpperCase() as Role;
-  return VALID_ROLES.includes(raw) ? raw : 'SELECTOR';
+  const hashWithoutQuery = window.location.hash.split('?')[0];
+  const normalized = hashWithoutQuery.replace(/^#\/?/, '').replace(/-/g, '_').toUpperCase() as Role;
+  return VALID_ROLES.includes(normalized) ? normalized : 'SELECTOR';
+}
+
+function readBranchIdFromUrl(): string | null {
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.get('branchId')) return searchParams.get('branchId');
+  if (window.location.hash.includes('?')) {
+    const hashQuery = window.location.hash.split('?')[1];
+    const hashParams = new URLSearchParams(hashQuery);
+    if (hashParams.get('branchId')) return hashParams.get('branchId');
+  }
+  return null;
 }
 
 export default function App() {
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(auth.getBranchId());
+  const urlBranchId = readBranchIdFromUrl();
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(
+    () => urlBranchId || auth.getBranchId()
+  );
   const [activeRole, setActiveRoleState] = useState<Role>(readRoleFromHash);
   const [branches, setBranches] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -219,7 +234,8 @@ export default function App() {
   };
 
   // ─── Branch Selector ─────────────────────────────────────────────────────
-  if (activeRole !== 'ATTENDANCE' && (!selectedBranchId || !isAuthed)) {
+  const isCustomerDisplay = activeRole === 'CUSTOMER_DISPLAY';
+  if (activeRole !== 'ATTENDANCE' && !isCustomerDisplay && (!selectedBranchId || !isAuthed)) {
     return (
       <BranchSelectorScreen
         branches={branches}
@@ -264,19 +280,19 @@ export default function App() {
   }
 
   // ─── Active Role View ────────────────────────────────────────────────────
-  const isCustomerDisplay = activeRole === 'CUSTOMER_DISPLAY';
+  const activeBranch = branches.find((b) => b.id === (selectedBranchId || urlBranchId)) || branches[0];
 
   return (
     <ActiveRoleShell
       activeRole={activeRole}
       isCustomerDisplay={isCustomerDisplay}
-      branchName={branches.find((b) => b.id === selectedBranchId)?.name}
+      branchName={activeBranch?.name}
       onSwitchRole={setActiveRole}
       onSwitchBranch={handleSwitchBranch}
     >
       {activeRole === 'CASHIER' && (
         <POSView
-          branch={branches.find((b) => b.id === selectedBranchId)}
+          branch={activeBranch}
           orders={orders}
           updateStatus={updateStatus}
           onOrderUpdated={mergeOrderIntoState}
@@ -289,13 +305,13 @@ export default function App() {
       )}
       {activeRole === 'QUEUE_MONITOR' && (
         <QueueMonitorView
-          branch={branches.find((b) => b.id === selectedBranchId)}
+          branch={activeBranch}
           orders={orders}
         />
       )}
       {activeRole === 'CUSTOMER_DISPLAY' && (
         <CustomerDisplayView
-          branch={branches.find((b) => b.id === selectedBranchId)}
+          branch={activeBranch}
           orders={orders}
         />
       )}
