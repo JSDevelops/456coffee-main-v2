@@ -70,11 +70,13 @@ export class BranchService {
         phone: true,
         imageUrl: true,
         createdAt: true,
-        _count: { select: { orders: true } },
+        // Removed _count: { orders } — counting ALL historical orders is expensive;
+        // the POS/LIFF only uses this list for branch selection.
       },
       orderBy: { createdAt: 'desc' },
     });
   }
+
 
   async getBranchById(id: string) {
     const branch = await this.prisma.branch.findUnique({
@@ -478,11 +480,20 @@ export class BranchService {
       .catch(() => null);
   }
 
-  // ─── Branch Orders ─────────────────────────────────────────────────────────
-
-  async getBranchOrders(branchId: string, limit = 20) {
+  // ─── Branch Orders (POS live board) ────────────────────────────────────────
+  // Only fetches today's non-terminal orders so the payload stays small.
+  // Completed / cancelled orders are excluded from the live board; the
+  // manager history endpoint serves historical queries instead.
+  async getBranchOrders(branchId: string, limit = 100) {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const activeStatuses = ['PENDING', 'PAID', 'PREPARING', 'READY_FOR_QC', 'READY_FOR_PICKUP', 'READY', 'DISPATCHED'];
     return this.prisma.order.findMany({
-      where: { branchId },
+      where: {
+        branchId,
+        createdAt: { gte: startOfDay },
+        status: { in: activeStatuses as any },
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
@@ -491,6 +502,7 @@ export class BranchService {
       },
     });
   }
+
 
   // ─── Manager-grade dashboard (today snapshot) ──────────────────────────────
 

@@ -264,6 +264,17 @@ model Order {
   promotions      OrderPromotion[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  // ── Performance indexes ──────────────────────────────────────────────
+  // POS live-order board: filter by branch + active statuses
+  @@index([branchId, status])
+  // Date-range reports: branch + date window
+  @@index([branchId, createdAt])
+  // Customer order history (LIFF)
+  @@index([customerUid])
+  @@index([userId])
+  // Global status + date for admin dashboards
+  @@index([status, createdAt])
 }
 
 model User {
@@ -302,6 +313,9 @@ model PointTransaction {
   delta       Int      // e.g., +10 or -50
   reason      String   // e.g., "Earned from Order #123", "Redeemed for Drink"
   createdAt   DateTime @default(now())
+
+  @@index([userId])     // loyalty history per user
+  @@index([orderId])    // dedup check per order
 }
 
 model AuthProvider {
@@ -326,6 +340,9 @@ model OrderItem {
   productName   String?  // snapshot: name at order time
   customization Json?    // { sweetness: "50%", milk: "oat", size: "L" }
   selectedOptions Json?  // snapshot: [{ group: "Size", label: "L", priceAddon: 20 }]
+
+  @@index([orderId])          // inventory deduction, items lookup per order
+  @@index([productId])        // top-product analytics
 }
 
 model Payment {
@@ -401,6 +418,10 @@ model AuditLog {
   userId    String?  // Optional: User who performed the action
   details   Json?
   createdAt DateTime @default(now())
+
+  @@index([entityId])           // look up all audit events for a resource
+  @@index([userId, createdAt])  // per-user activity log
+  @@index([action, createdAt])  // admin action replay / security audit
 }
 
 model InventoryTransaction {
@@ -417,6 +438,10 @@ model InventoryTransaction {
   note         String?
   createdAt    DateTime   @default(now())
   createdBy    String?    // user ID who made the transaction
+
+  @@index([branchId, ingredientId])   // ingredient movement history
+  @@index([referenceId])              // idempotency check in deductInventoryForOrder
+  @@index([branchId, createdAt])      // usage timeline reports
 }
 
 model CashflowTransaction {
@@ -431,6 +456,10 @@ model CashflowTransaction {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   createdBy    String?    // Admin ID
+
+  @@index([branchId, createdAt])          // date-range finance reports
+  @@index([branchId, type, category])     // P&L breakdown
+  @@index([referenceId])                  // findFirst by orderId in side-effects
 }
 
 // ─── Promotion / Discount System ────────────────────────────────────────────

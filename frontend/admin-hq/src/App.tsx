@@ -1,24 +1,26 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 import { auth } from './api';
 import { ToastProvider } from './components/ui';
 import { AppShell } from './components/layout/AppShell';
 import type { Page } from './components/layout/Sidebar';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import BranchesPage from './pages/BranchesPage';
-import ProductsPage from './pages/ProductsPage';
-import OrdersPage from './pages/OrdersPage';
-import CustomersPage from './pages/CustomersPage';
-import InventoryLedger from './pages/InventoryLedger';
-import CostManagement from './pages/CostManagement';
-import FinanceLedger from './pages/FinanceLedger';
-import SettingsPage from './pages/SettingsPage';
-import ProfilePage from './pages/ProfilePage';
-import PromotionsPage from './pages/PromotionsPage';
-import SalesChannelsPage from './pages/SalesChannelsPage';
-import AnnouncementsPage from './pages/AnnouncementsPage';
-import AcademyAdminPage from './pages/AcademyAdminPage';
-import PlantationsAdminPage from './pages/PlantationsAdminPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const BranchesPage = lazy(() => import('./pages/BranchesPage'));
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const CustomersPage = lazy(() => import('./pages/CustomersPage'));
+const InventoryLedger = lazy(() => import('./pages/InventoryLedger'));
+const CostManagement = lazy(() => import('./pages/CostManagement'));
+const FinanceLedger = lazy(() => import('./pages/FinanceLedger'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const PromotionsPage = lazy(() => import('./pages/PromotionsPage'));
+const SalesChannelsPage = lazy(() => import('./pages/SalesChannelsPage'));
+const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
+const AcademyAdminPage = lazy(() => import('./pages/AcademyAdminPage'));
+const PlantationsAdminPage = lazy(() => import('./pages/PlantationsAdminPage'));
 
 const VALID_PAGES: Page[] = [
   'overview',
@@ -104,7 +106,9 @@ export default function App() {
   if (!authed) {
     return (
       <ToastProvider>
-        <LoginPage onLoginSuccess={() => setAuthed(true)} />
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-base-900"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>}>
+          <LoginPage onLoginSuccess={() => setAuthed(true)} />
+        </Suspense>
       </ToastProvider>
     );
   }
@@ -125,28 +129,30 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
       >
-        {page === 'overview' && (
-          <DashboardPage
-            onJumpToOrders={() => setPage('orders')}
-            onJumpToProducts={() => setPage('products')}
-          />
-        )}
-        {page === 'branches' && <BranchesPage />}
-        {page === 'products' && <ProductsPage />}
-        {page === 'orders' && <OrdersPage />}
-        {page === 'customers' && <CustomersPage />}
-        {page === 'inventory' && <InventoryLedger />}
-        {page === 'cost' && <CostManagement />}
-        {page === 'finance' && <FinanceLedger />}
-        {page === 'promotions' && <PromotionsPage />}
-        {page === 'channels'   && <SalesChannelsPage />}
-        {page === 'settings'   && <SettingsPage />}
-        {page === 'announcements' && <AnnouncementsPage />}
-        {page === 'academy' && <AcademyAdminPage />}
-        {page === 'plantations' && <PlantationsAdminPage />}
-        {page === 'profile' && (
-          <ProfilePage theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />
-        )}
+        <Suspense fallback={<div className="p-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>}>
+          {page === 'overview' && (
+            <DashboardPage
+              onJumpToOrders={() => setPage('orders')}
+              onJumpToProducts={() => setPage('products')}
+            />
+          )}
+          {page === 'branches' && <BranchesPage />}
+          {page === 'products' && <ProductsPage />}
+          {page === 'orders' && <OrdersPage />}
+          {page === 'customers' && <CustomersPage />}
+          {page === 'inventory' && <InventoryLedger />}
+          {page === 'cost' && <CostManagement />}
+          {page === 'finance' && <FinanceLedger />}
+          {page === 'promotions' && <PromotionsPage />}
+          {page === 'channels'   && <SalesChannelsPage />}
+          {page === 'settings'   && <SettingsPage />}
+          {page === 'announcements' && <AnnouncementsPage />}
+          {page === 'academy' && <AcademyAdminPage />}
+          {page === 'plantations' && <PlantationsAdminPage />}
+          {page === 'profile' && (
+            <ProfilePage theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />
+          )}
+        </Suspense>
       </AppShell>
     </ToastProvider>
   );

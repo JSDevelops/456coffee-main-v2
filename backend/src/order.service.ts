@@ -62,60 +62,68 @@ export class OrderService {
     totalAmount: number;
     orderNo: string;
   }) {
-    if (order.userId) {
-      const pointsEarned = Math.floor(order.totalAmount / 10);
-      if (pointsEarned > 0) {
-        await this.userService.updatePoints(
-          order.userId,
-          pointsEarned,
-          `ได้แต้มจากออเดอร์ #${order.orderNo}`,
-          order.id,
-        );
-      }
-    }
+    // Run loyalty points update and cashflow check in parallel (independent ops).
+    const [existingCashflow, items] = await Promise.all([
+      this.prisma.cashflowTransaction.findFirst({
+        where: { referenceId: order.id, category: 'SALES', type: 'INCOME' },
+        select: { id: true },
+      }),
+      this.prisma.orderItem.findMany({
+        where: { orderId: order.id },
+        select: { quantity: true },
+      }),
+      // Fire-and-forget loyalty points concurrently
+      order.userId
+        ? (async () => {
+            const pointsEarned = Math.floor(order.totalAmount / 10);
+            if (pointsEarned > 0) {
+              await this.userService.updatePoints(
+                order.userId!,
+                pointsEarned,
+                `ได้แต้มจากออเดอร์ #${order.orderNo}`,
+                order.id,
+              );
+            }
+          })()
+        : Promise.resolve(),
+    ]);
 
-    const existingCashflow = await this.prisma.cashflowTransaction.findFirst({
-      where: { referenceId: order.id, category: 'SALES', type: 'INCOME' },
-      select: { id: true },
-    });
-    if (!existingCashflow) {
-      await this.prisma.cashflowTransaction.create({
-        data: {
-          branchId: order.branchId,
-          type: 'INCOME',
-          category: 'SALES',
-          amount: order.totalAmount,
-          referenceId: order.id,
-          note: `รายได้จากออเดอร์ #${order.orderNo}`,
-        },
-      });
-    }
-
-    // Record platform fee (1 Baht per ordered item)
-    const items = await this.prisma.orderItem.findMany({
-      where: { orderId: order.id },
-      select: { quantity: true },
-    });
     const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-    const platformFeeCategory = 'PLATFORM_FEE';
+    // Check platform fee existence in parallel with cashflow create (if needed)
     const existingPlatformFee = await this.prisma.cashflowTransaction.findFirst({
-      where: { referenceId: order.id, category: platformFeeCategory, type: 'EXPENSE' },
+      where: { referenceId: order.id, category: 'PLATFORM_FEE', type: 'EXPENSE' },
       select: { id: true },
     });
-    if (!existingPlatformFee && totalItemsCount > 0) {
-      await this.prisma.cashflowTransaction.create({
-        data: {
-          branchId: order.branchId,
-          type: 'EXPENSE',
-          category: platformFeeCategory,
-          amount: totalItemsCount * 1.0,
-          referenceId: order.id,
-          note: `ค่าธรรมเนียมแพลตฟอร์มสำหรับออเดอร์ #${order.orderNo} (จำนวน ${totalItemsCount} รายการ)`,
-        },
-      });
-    }
+
+    // Batch creates in parallel
+    await Promise.all([
+      !existingCashflow &&
+        this.prisma.cashflowTransaction.create({
+          data: {
+            branchId: order.branchId,
+            type: 'INCOME',
+            category: 'SALES',
+            amount: order.totalAmount,
+            referenceId: order.id,
+            note: `รายได้จากออเดอร์ #${order.orderNo}`,
+          },
+        }),
+      !existingPlatformFee &&
+        totalItemsCount > 0 &&
+        this.prisma.cashflowTransaction.create({
+          data: {
+            branchId: order.branchId,
+            type: 'EXPENSE',
+            category: 'PLATFORM_FEE',
+            amount: totalItemsCount * 1.0,
+            referenceId: order.id,
+            note: `ค่าธรรมเนียมแพลตฟอร์มสำหรับออเดอร์ #${order.orderNo} (จำนวน ${totalItemsCount} รายการ)`,
+          },
+        }),
+    ].filter(Boolean));
   }
+
 
   // ─── Create Order ───────────────────────────────────────────────────────
   // orderNo + queueNo are computed inside the same transaction as the insert
@@ -554,7 +562,10 @@ export class OrderService {
     }
 
     const page = Math.max(1, filters?.page || 1);
-    const limit = Math.min(10000, Math.max(1, filters?.limit || 25));
+    // Hard cap at 200 rows — returning 10 000 full orders with nested includes
+    // would saturate the DB, network, and browser in one shot.
+    const limit = Math.min(200, Math.max(1, filters?.limit || 25));
+
     const sort = filters?.sort || 'newest';
     const orderBy: Prisma.OrderOrderByWithRelationInput =
       sort === 'oldest'

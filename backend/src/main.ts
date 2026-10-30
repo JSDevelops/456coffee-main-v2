@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import compression from 'compression';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { AppModule } from './app.module';
@@ -85,6 +86,9 @@ async function bootstrap() {
     },
     credentials: true,
   });
+
+  // Enable response compression (gzip/deflate) to drastically speed up network transfers
+  app.use(compression());
 
   // Standard HTTP security headers (CSP off by default since we don't yet
   // enumerate inline scripts/styles; turn it on once frontend assets are stable).

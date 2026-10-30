@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Coffee,
@@ -29,15 +29,15 @@ import {
 import { io, Socket } from 'socket.io-client';
 import { API_BASE, SOCKET_URL, auth } from './api';
 
-import POSView from './components/roles/POSView';
-import BaristaView from './components/roles/BaristaView';
-import QCView from './components/roles/QCView';
-import DispatchView from './components/roles/DispatchView';
-import QueueMonitorView from './components/roles/QueueMonitorView';
-import CustomerDisplayView from './components/roles/CustomerDisplayView';
-import StockCheckView from './components/roles/StockCheckView';
-import ManagerView from './components/roles/ManagerView';
-import MobileAttendanceView from './components/roles/MobileAttendanceView';
+const POSView = lazy(() => import('./components/roles/POSView'));
+const BaristaView = lazy(() => import('./components/roles/BaristaView'));
+const QCView = lazy(() => import('./components/roles/QCView'));
+const DispatchView = lazy(() => import('./components/roles/DispatchView'));
+const QueueMonitorView = lazy(() => import('./components/roles/QueueMonitorView'));
+const CustomerDisplayView = lazy(() => import('./components/roles/CustomerDisplayView'));
+const StockCheckView = lazy(() => import('./components/roles/StockCheckView'));
+const ManagerView = lazy(() => import('./components/roles/ManagerView'));
+const MobileAttendanceView = lazy(() => import('./components/roles/MobileAttendanceView'));
 
 type Role =
   | 'SELECTOR'
@@ -124,11 +124,11 @@ export default function App() {
   const mergeOrderIntoState = useCallback((order: any) => {
     if (!order?.id) return;
     setOrders((prev) => {
-      const exists = prev.some((existing) => existing.id === order.id);
-      if (!exists) return [order, ...prev];
-      return prev.map((existing) =>
-        existing.id === order.id ? { ...existing, ...order } : existing,
-      );
+      const idx = prev.findIndex((o) => o.id === order.id);
+      if (idx === -1) return [order, ...prev];
+      const next = [...prev];
+      next[idx] = { ...prev[idx], ...order };
+      return next;
     });
   }, []);
 
@@ -174,7 +174,10 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
         body: JSON.stringify({ status, metadata }),
       });
       if (!res.ok) throw new Error('Update failed');
@@ -186,6 +189,7 @@ export default function App() {
       throw err;
     }
   };
+
 
   const handleSelectBranch = (branch: any) => {
     if (auth.isLoggedIn() && auth.getBranchId() === branch.id) {
@@ -276,7 +280,11 @@ export default function App() {
 
   // ─── Mobile Attendance View (Public) ─────────────────────────────────────
   if (activeRole === 'ATTENDANCE') {
-    return <MobileAttendanceView />;
+    return (
+      <Suspense fallback={<div className="h-[100dvh] flex items-center justify-center bg-[#1a1410]"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>}>
+        <MobileAttendanceView />
+      </Suspense>
+    );
   }
 
   // ─── Active Role View ────────────────────────────────────────────────────
@@ -290,37 +298,39 @@ export default function App() {
       onSwitchRole={setActiveRole}
       onSwitchBranch={handleSwitchBranch}
     >
-      {activeRole === 'CASHIER' && (
-        <POSView
-          branch={activeBranch}
-          orders={orders}
-          updateStatus={updateStatus}
-          onOrderUpdated={mergeOrderIntoState}
-        />
-      )}
-      {activeRole === 'BARISTA' && <BaristaView orders={orders} updateStatus={updateStatus} />}
-      {activeRole === 'QC' && <QCView orders={orders} updateStatus={updateStatus} />}
-      {activeRole === 'DISPATCHER' && (
-        <DispatchView orders={orders} updateStatus={updateStatus} />
-      )}
-      {activeRole === 'QUEUE_MONITOR' && (
-        <QueueMonitorView
-          branch={activeBranch}
-          orders={orders}
-        />
-      )}
-      {activeRole === 'CUSTOMER_DISPLAY' && (
-        <CustomerDisplayView
-          branch={activeBranch}
-          orders={orders}
-        />
-      )}
-      {activeRole === 'STOCK_CHECK' && (
-        <StockCheckView branch={branches.find((b) => b.id === selectedBranchId)} />
-      )}
-      {activeRole === 'MANAGER' && (
-        <ManagerView branch={branches.find((b) => b.id === selectedBranchId)} />
-      )}
+      <Suspense fallback={<div className="h-full flex items-center justify-center bg-[#1a1410]"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>}>
+        {activeRole === 'CASHIER' && (
+          <POSView
+            branch={activeBranch}
+            orders={orders}
+            updateStatus={updateStatus}
+            onOrderUpdated={mergeOrderIntoState}
+          />
+        )}
+        {activeRole === 'BARISTA' && <BaristaView orders={orders} updateStatus={updateStatus} />}
+        {activeRole === 'QC' && <QCView orders={orders} updateStatus={updateStatus} />}
+        {activeRole === 'DISPATCHER' && (
+          <DispatchView orders={orders} updateStatus={updateStatus} />
+        )}
+        {activeRole === 'QUEUE_MONITOR' && (
+          <QueueMonitorView
+            branch={activeBranch}
+            orders={orders}
+          />
+        )}
+        {activeRole === 'CUSTOMER_DISPLAY' && (
+          <CustomerDisplayView
+            branch={activeBranch}
+            orders={orders}
+          />
+        )}
+        {activeRole === 'STOCK_CHECK' && (
+          <StockCheckView branch={branches.find((b) => b.id === selectedBranchId)} />
+        )}
+        {activeRole === 'MANAGER' && (
+          <ManagerView branch={branches.find((b) => b.id === selectedBranchId)} />
+        )}
+      </Suspense>
     </ActiveRoleShell>
   );
 }
