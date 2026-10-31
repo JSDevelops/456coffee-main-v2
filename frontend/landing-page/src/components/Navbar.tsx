@@ -68,6 +68,17 @@ export function Navbar() {
           {/* Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
             <a
+              href="https://coffee-phupan.ai.studio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl text-emerald-800 hover:text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 transition-colors shadow-sm"
+            >
+              <Sparkles size={14} className="text-emerald-600" />
+              AI Studio กาแฟภูพาน
+              <ArrowUpRight size={13} className="text-emerald-600" />
+            </a>
+
+            <a
               href="#academy"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl text-[#7F5539] hover:text-[#231205] bg-[#F5EBE0] hover:bg-[#E6CCB2] transition-colors"
             >
@@ -112,6 +123,17 @@ export function Navbar() {
               </a>
             ))}
             <div className="pt-2 flex flex-col gap-2.5">
+              <a
+                href="https://coffee-phupan.ai.studio/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-700 to-emerald-800 border border-emerald-500/40 shadow-md"
+              >
+                <Sparkles size={16} />
+                AI Studio กาแฟภูพาน (coffee-phupan.ai.studio)
+                <ArrowUpRight size={14} />
+              </a>
               <a
                 href="#plantations"
                 onClick={() => setMobileMenuOpen(false)}

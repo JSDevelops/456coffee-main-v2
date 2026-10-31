@@ -246,6 +246,15 @@ export default function CoffeeHubHomepage() {
               Coffee Academy
             </a>
             <a
+              href="https://coffee-phupan.ai.studio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5 font-semibold"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              AI กาแฟภูพาน
+            </a>
+            <a
               href="#ch-news-section"
               className="text-[#C5B3A1] hover:text-white transition-colors"
             >
@@ -272,6 +281,17 @@ export default function CoffeeHubHomepage() {
               <Search className="w-5 h-5" />
             </button>
             
+            <a
+              href="https://coffee-phupan.ai.studio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-full text-xs font-bold text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 hover:text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/50 transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              AI Studio กาแฟภูพาน
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </a>
+
             <a
               href="/js-develop"
               className="px-4 py-2 rounded-full text-sm font-semibold text-white/90 border border-white/20 hover:border-orange-500 hover:text-orange-400 bg-white/5 hover:bg-white/10 transition-all"
@@ -334,6 +354,19 @@ export default function CoffeeHubHomepage() {
               className="block px-4 py-2.5 rounded-xl font-medium text-[#D8C7B6] hover:bg-white/5 text-base"
             >
               ข่าวสาร
+            </a>
+            <a
+              href="https://coffee-phupan.ai.studio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-4 py-2.5 rounded-xl font-semibold text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/50 text-base"
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                AI Studio กาแฟภูพาน
+              </span>
+              <ExternalLink className="w-4 h-4 text-emerald-400" />
             </a>
             <a
               href="/js-develop"
@@ -577,6 +610,37 @@ export default function CoffeeHubHomepage() {
             </div>
           </div>
 
+        </div>
+
+        {/* Featured AI Connection Banner */}
+        <div className="mt-5 sm:mt-6 p-4 sm:p-6 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#1C120A] to-[#160B05] border border-emerald-500/35 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-emerald-700/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-inner">
+              <Sparkles className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-white font-bold text-base sm:text-lg">
+                  AI Studio กาแฟภูพาน
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase tracking-wide">
+                  AI Powered Studio
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#C8D7CD] mt-1 max-w-2xl leading-relaxed">
+                ระบบปัญญาประดิษฐ์ (AI) วิเคราะห์สายพันธุ์กาแฟโรบัสต้าภูพาน เทคนิคการเพาะปลูก และระบบสารสนเทศกาแฟอัตลักษณ์
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://coffee-phupan.ai.studio/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border border-emerald-400/40 shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shrink-0"
+          >
+            <span>เข้าสู่ระบบ AI Studio</span>
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </section>
 
@@ -960,6 +1024,14 @@ export default function CoffeeHubHomepage() {
               <a href="#pathway-plantation" className="hover:text-white transition-colors">แปลงปลูก</a>
               <a href="#ch-network-map" className="hover:text-white transition-colors">ร้านกาแฟ</a>
               <a href="#pathway-academy" className="hover:text-white transition-colors">Academy</a>
+              <a
+                href="https://coffee-phupan.ai.studio/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+              >
+                <Sparkles className="w-3.5 h-3.5" /> AI กาแฟภูพาน
+              </a>
               <a href="#ch-news-section" className="hover:text-white transition-colors">ข่าวสาร</a>
               <a href="/js-develop" className="text-orange-400 hover:text-orange-300 font-semibold">
                 หน้าหลัก JS DEVELOP
@@ -1004,6 +1076,14 @@ export default function CoffeeHubHomepage() {
             </div>
 
             <div className="space-y-3 pt-2 text-sm">
+              <a
+                href="https://coffee-phupan.ai.studio/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 font-semibold text-center flex items-center justify-center gap-2 text-white shadow-lg shadow-emerald-950/40"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-200" /> เข้าสู่ระบบ AI Studio กาแฟภูพาน
+              </a>
               <a
                 href="tel:0613055625"
                 className="w-full py-3 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 font-semibold text-center flex items-center justify-center gap-2 text-white shadow-lg shadow-orange-950/40"

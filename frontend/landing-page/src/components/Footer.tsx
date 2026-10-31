@@ -109,17 +109,17 @@ export function Footer() {
 
             {/* Coffee Phupan Network Card */}
             <a
-              href="https://coffee-phupan.ai.studio"
+              href="https://coffee-phupan.ai.studio/"
               target="_blank"
               rel="noopener noreferrer"
               className="block p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-sm">🌿</span>
+                  <span className="text-sm">🤖</span>
                   <div>
                     <div className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
-                      เครือข่ายผู้ปลูกกาแฟภูพาน
+                      AI Studio กาแฟภูพาน
                     </div>
                     <div className="text-[10px] text-[#A68A78]">
                       coffee-phupan.ai.studio

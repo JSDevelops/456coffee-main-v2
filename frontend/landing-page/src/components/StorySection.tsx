@@ -111,12 +111,12 @@ export function StorySection() {
 
             <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3 justify-center lg:items-end">
               <a
-                href="https://coffee-phupan.ai.studio"
+                href="https://coffee-phupan.ai.studio/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-xs font-bold text-[#231205] bg-[#FDE047] hover:bg-[#FACC15] shadow-lg shadow-black/30 transition-all hover:scale-105"
               >
-                เยี่ยมชมเว็บไซต์โครงการภูพาน
+                เยี่ยมชม AI Studio กาแฟภูพาน
                 <ExternalLink size={14} />
               </a>
               <span className="text-[11px] text-[#A68A78] text-center lg:text-right">
