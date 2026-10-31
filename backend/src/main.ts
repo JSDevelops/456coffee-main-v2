@@ -64,6 +64,9 @@ async function bootstrap() {
     'https://465coffee.vercel.app',
     'https://465coffee-nine.vercel.app',
     'https://456.coffee-cafe.shop',
+    'https://coffee-cafe.shop',
+    'https://branch-pos-mu.vercel.app',
+    'https://buyer-liff.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
@@ -76,7 +79,7 @@ async function bootstrap() {
       if (!origin) return callback(null, true);
       const isAllowed =
         allowedOrigins.includes(origin) ||
-        /^https:\/\/465coffee.*\.vercel\.app$/.test(origin) ||
+        /^https:\/\/(branch-pos|buyer-liff|465coffee|coffee-cafe).*\.vercel\.app$/.test(origin) ||
         /^https:\/\/.*\.coffee-cafe\.shop$/.test(origin);
       if (isAllowed) {
         callback(null, true);
