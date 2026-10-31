@@ -39,7 +39,7 @@ export function Navbar() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-heading font-black text-2xl tracking-tight text-[#231205]">
-                  456 <span className="text-[#EA580C]">COFFEE</span>
+                  COFFEE <span className="text-[#EA580C]">FARM</span>
                 </span>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EA580C]/10 text-[#EA580C] uppercase tracking-wider">
                   HUB

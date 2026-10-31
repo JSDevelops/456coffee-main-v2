@@ -194,7 +194,7 @@ export default function CoffeeHubHomepage() {
           <a
             href="/coffee-home"
             className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg p-1"
-            aria-label="456 COFFEE HUB หน้าแรก"
+            aria-label="COFFEE FARM หน้าแรก"
           >
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#EA580C] to-[#C2410C] flex items-center justify-center shadow-lg shadow-orange-950/40 group-hover:scale-105 transition-transform">
               <Coffee className="w-6 h-6 text-white" strokeWidth={2.2} />
@@ -202,7 +202,7 @@ export default function CoffeeHubHomepage() {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-orange-400 transition-colors">
-                  456 COFFEE
+                  COFFEE FARM
                 </span>
                 <span className="px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#F97316] border border-[#F97316]/50 rounded-full bg-[#EA580C]/15">
                   HUB
