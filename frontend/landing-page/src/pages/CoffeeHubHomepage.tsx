@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Coffee,
   Sprout,
@@ -6,12 +6,11 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  Search,
+  ChevronDown,
   Menu as MenuIcon,
   X,
   Calendar,
   Users,
-  FileText,
   ExternalLink,
   Phone,
   ArrowRight,
@@ -19,7 +18,14 @@ import {
   Info,
   Navigation,
   Copy,
-  Check
+  Check,
+  Bot,
+  Smartphone,
+  Monitor,
+  ShieldCheck,
+  Layers,
+  Compass,
+  ArrowUpRight
 } from 'lucide-react';
 import './CoffeeHubHomepage.css';
 import { fetchBranchesApi, PublicBranch } from '../api';
@@ -34,12 +40,29 @@ interface NewsItemData {
   imageUrl: string;
 }
 
+interface SubMenuItem {
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string; size?: number }>;
+  badge?: string;
+  isExternal?: boolean;
+}
+
+interface NavCategory {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string; size?: number }>;
+  items: SubMenuItem[];
+}
+
 export default function CoffeeHubHomepage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [mobileExpandedCat, setMobileExpandedCat] = useState<string | null>('ecosystem');
   const [copiedCoordinates, setCopiedCoordinates] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('home');
+  const dropdownTimeoutRef = useRef<any>(null);
 
   // Fallback branch list if offline
   const defaultBranches = [
@@ -128,254 +151,460 @@ export default function CoffeeHubHomepage() {
     setTimeout(() => setCopiedCoordinates(false), 2500);
   };
 
-  // News items matching reference images
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.ch-dropdown-container')) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Dropdown hover handling with buffer delay
+  const handleDropdownEnter = (id: string) => {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    setOpenDropdown(id);
+  };
+
+  const handleDropdownLeave = () => {
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setOpenDropdown(null);
+    }, 180);
+  };
+
+  // Categorized Navigation Submenus
+  const navCategories: NavCategory[] = [
+    {
+      id: 'about',
+      label: 'เกี่ยวกับเรา',
+      icon: Compass,
+      items: [
+        {
+          title: 'เรื่องราวกาแฟภูพาน',
+          description: 'อัตลักษณ์กาแฟโรบัสต้าบนเทือกเขาภูพาน จ.กาฬสินธุ์',
+          href: '#story-origin',
+          icon: Coffee
+        },
+        {
+          title: 'วิสัยทัศน์ระบบนิเวศ 456',
+          description: 'เชื่อมโยงต้นน้ำ กลางน้ำ ปลายน้ำ เพื่อชุมชนที่ยั่งยืน',
+          href: '#ecosystem-pillars',
+          icon: Layers
+        },
+        {
+          title: 'ข่าวสาร & กิจกรรม',
+          description: 'อัปเดตผลผลิตชุมชน เทคนิคการปลูก และงานอบรม',
+          href: '#ch-news-section',
+          icon: Calendar
+        }
+      ]
+    },
+    {
+      id: 'ecosystem',
+      label: 'ระบบนิเวศ 3 เสาหลัก',
+      icon: Layers,
+      items: [
+        {
+          title: 'ต้นน้ำ · แหล่งปลูก & จองต้นพันธุ์',
+          description: 'แปลงปลูกกาแฟคุณภาพสูงบนภูพาน พร้อมระบบจองต้นกล้าพันธุ์แท้',
+          href: '#pathway-plantation',
+          icon: Sprout,
+          badge: 'ต้นน้ำ'
+        },
+        {
+          title: 'กลางน้ำ · Coffee Academy',
+          description: 'สถาบันอบรมบาริสต้า เทคนิคการคั่ว และการบริหารจัดการร้านกาแฟ',
+          href: '#pathway-academy',
+          icon: GraduationCap,
+          badge: 'กลางน้ำ'
+        },
+        {
+          title: 'ปลายน้ำ · คาเฟ่ 456 Coffee',
+          description: 'สาขาหลักกาฬสินธุ์ และเครือข่ายร้านกาแฟ Specialty ในชุมชน',
+          href: '#ch-network-map',
+          icon: Coffee,
+          badge: 'ปลายน้ำ'
+        }
+      ]
+    },
+    {
+      id: 'tech',
+      label: 'เทคโนโลยี & AI',
+      icon: Bot,
+      items: [
+        {
+          title: 'AI Studio กาแฟภูพาน',
+          description: 'ระบบ AI อัจฉริยะวิเคราะห์สายพันธุ์และแนะนำการเพาะปลูก',
+          href: 'https://coffee-phupan.ai.studio/',
+          icon: Sparkles,
+          badge: 'AI Studio',
+          isExternal: true
+        },
+        {
+          title: 'แอปสั่งซื้อลูกค้าออนไลน์',
+          description: 'สั่งกาแฟล่วงหน้า สะสมแต้ม ไม่ต้องรอคิว (order.coffee-cafe.shop)',
+          href: 'https://order.coffee-cafe.shop',
+          icon: Smartphone,
+          badge: 'LIFF App',
+          isExternal: true
+        },
+        {
+          title: 'ระบบแคชเชียร์สาขา (Branch POS)',
+          description: 'ระบบขายหน้าร้าน จอสองฝั่ง พร้อมเชื่อมต่อออเดอร์ทันที',
+          href: 'https://pos.coffee-cafe.shop',
+          icon: Monitor,
+          isExternal: true
+        },
+        {
+          title: 'ระบบบริหารหลังบ้าน (HQ Admin)',
+          description: 'ศูนย์กลางควบคุมสต็อก วัตถุดิบ บัญชี และวิเคราะห์ยอดขาย',
+          href: 'https://456.coffee-cafe.shop',
+          icon: ShieldCheck,
+          isExternal: true
+        }
+      ]
+    },
+    {
+      id: 'contact',
+      label: 'ติดต่อ & เครือข่าย',
+      icon: MapPin,
+      items: [
+        {
+          title: 'แผนที่ & ตำแหน่งสาขาหลัก',
+          description: 'ตรงข้ามศูนย์ราชการจังหวัดกาฬสินธุ์ พร้อมระบบนำทาง',
+          href: '#ch-network-map',
+          icon: MapPin
+        },
+        {
+          title: 'สมัครร่วมเครือข่าย 456',
+          description: 'สำหรับร้านกาแฟ เกษตรกรผู้ปลูก และผู้สนใจเปิดร้าน',
+          href: '#join-network',
+          icon: Users,
+          badge: 'ยินดีต้อนรับ'
+        },
+        {
+          title: 'โทรสอบถาม 061-305-5625',
+          description: 'สายด่วนติดต่อทีมงาน 456 Coffee ประจำสาขาหลัก',
+          href: 'tel:0613055625',
+          icon: Phone
+        }
+      ]
+    }
+  ];
+
+  // News items
   const newsList: NewsItemData[] = [
     {
       id: 'news-1',
-      title: 'ฤดูกาลเก็บเกี่ยวกาแฟกาฬสินธุ์',
-      summary: 'อัปเดตสถานการณ์ ผลผลิต และกิจกรรมในชุมชนกาแฟ',
+      title: 'ฤดูกาลเก็บเกี่ยวกาแฟโรบัสต้าภูพาน กาฬสินธุ์',
+      summary: 'ผลผลิตเชอรี่สุกเต็มที่ เกษตรกรส่งมอบเข้าสู่กระบวนการแปรรูปคุณภาพสูง',
       date: '12 พ.ย. 2567',
       category: 'ผลผลิตชุมชน',
       imageUrl: 'https://images.unsplash.com/photo-1518832553480-cd0e625ed3e6?q=80&w=800&auto=format&fit=crop',
     },
     {
       id: 'news-2',
-      title: 'เทคนิคการปลูกกาแฟคุณภาพ',
-      summary: 'แนวทางการดูแล การจัดการดิน และสายพันธุ์ที่เหมาะสม',
+      title: 'เปิดอบรมบาริสต้ารุ่นใหม่ โดย 456 Coffee Academy',
+      summary: 'เรียนรู้ทักษะการสกัดกาแฟ การสตีมนม และการจัดการหน้าร้านอย่างมืออาชีพ',
       date: '28 ต.ค. 2567',
-      category: 'เกษตรกรรมยั่งยืน',
-      imageUrl: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=80&w=800&auto=format&fit=crop',
+      category: 'การศึกษา & อาชีพ',
+      imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800&auto=format&fit=crop',
     },
     {
       id: 'news-3',
-      title: 'ส่องเทรนด์กาแฟไทย ปี 2025',
-      summary: 'โอกาสและความท้าทายของร้านกาแฟในยุคใหม่',
+      title: 'เปิดตัวระบบ AI Studio วิเคราะห์สายพันธุ์กาแฟภูพาน',
+      summary: 'นวัตกรรมดิจิทัลช่วยเกษตรกรยกระดับคุณภาพผลผลิตสู่มาตรฐานสากล',
       date: '15 ต.ค. 2567',
-      category: 'เทรนด์ธุรกิจ',
+      category: 'นวัตกรรม AI',
       imageUrl: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=800&auto=format&fit=crop',
     },
   ];
 
-  const filteredNews = useMemo(() => {
-    return newsList.filter((n) => {
-      return (
-        !searchQuery.trim() ||
-        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        n.summary.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    });
-  }, [newsList, searchQuery]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const mapSection = document.getElementById('ch-network-map');
-    if (mapSection) {
-      mapSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const setChipSearch = (query: string) => {
-    setSearchQuery(query);
-    const mapSection = document.getElementById('ch-network-map');
-    if (mapSection) {
-      mapSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
-    <div className="ch-page-wrapper">
+    <div className="ch-page-wrapper selection:bg-orange-600 selection:text-white">
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 1. TOP NAVIGATION BAR */}
+      {/* 1. TOP NAVIGATION WITH CATEGORIZED SUBMENUS */}
       {/* ────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-[#140A04]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-8 transition-colors">
+      <header className="sticky top-0 z-50 bg-[#120803]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-8 transition-colors">
         <div className="max-w-7xl mx-auto h-20 flex items-center justify-between gap-4">
           
           {/* Logo & Brand Identity */}
           <a
-            href="/coffee-home"
-            className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg p-1"
+            href="/"
+            className="flex items-center gap-3.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-xl p-1"
             aria-label="COFFEE FARM หน้าแรก"
           >
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#EA580C] to-[#C2410C] flex items-center justify-center shadow-lg shadow-orange-950/40 group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#EA580C] via-[#C2410C] to-[#9A3412] flex items-center justify-center shadow-lg shadow-orange-950/40 group-hover:scale-105 transition-transform border border-orange-400/30">
               <Coffee className="w-6 h-6 text-white" strokeWidth={2.2} />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-orange-400 transition-colors">
-                  COFFEE FARM
+                <span className="font-heading font-black text-xl tracking-tight text-white group-hover:text-orange-400 transition-colors">
+                  COFFEE <span className="text-[#EA580C]">FARM</span>
                 </span>
-                <span className="px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#F97316] border border-[#F97316]/50 rounded-full bg-[#EA580C]/15">
+                <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-orange-400 border border-orange-500/40 rounded-md bg-orange-600/15">
                   HUB
                 </span>
               </div>
-              <span className="text-xs text-[#C8B8A6] font-medium tracking-wide">
-                คาเฟ่ · แปลงปลูก · Academy
+              <span className="text-[11px] text-[#A68A78] font-medium tracking-wide">
+                ระบบนิเวศกาแฟโรบัสต้าภูพาน
               </span>
             </div>
           </a>
 
-          {/* Desktop Horizontal Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-7 text-sm font-medium">
-            <button
-              onClick={() => setActiveTab('home')}
-              className={`relative py-2 transition-colors ${
-                activeTab === 'home' ? 'text-white font-semibold' : 'text-[#C5B3A1] hover:text-white'
-              }`}
+          {/* Desktop Submenu Navigation */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-sm font-medium">
+            <a
+              href="/"
+              className="px-3.5 py-2 rounded-xl text-white font-semibold hover:bg-white/5 transition-colors"
             >
               หน้าแรก
-              {activeTab === 'home' && (
-                <span className="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#EA580C] rounded-full" />
-              )}
-            </button>
-            <a
-              href="#pathway-plantation"
-              className="text-[#C5B3A1] hover:text-white transition-colors"
-            >
-              แหล่งปลูกกาแฟ
             </a>
-            <a
-              href="#ch-network-map"
-              className="text-[#C5B3A1] hover:text-white transition-colors"
-            >
-              ร้าน 456 Coffee
-            </a>
-            <a
-              href="#pathway-academy"
-              className="text-[#C5B3A1] hover:text-white transition-colors"
-            >
-              Coffee Academy
-            </a>
-            <a
-              href="https://coffee-phupan.ai.studio/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5 font-semibold"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              AI กาแฟภูพาน
-            </a>
-            <a
-              href="#ch-news-section"
-              className="text-[#C5B3A1] hover:text-white transition-colors"
-            >
-              ข่าวสาร
-            </a>
-            <a
-              href="#ch-footer-section"
-              className="text-[#C5B3A1] hover:text-white transition-colors"
-            >
-              เกี่ยวกับเรา
-            </a>
+
+            {/* Categorized Dropdown Items */}
+            {navCategories.map((cat) => {
+              const isOpen = openDropdown === cat.id;
+              const IconComponent = cat.icon;
+              return (
+                <div
+                  key={cat.id}
+                  className="relative ch-dropdown-container"
+                  onMouseEnter={() => handleDropdownEnter(cat.id)}
+                  onMouseLeave={handleDropdownLeave}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenDropdown(isOpen ? null : cat.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                      isOpen
+                        ? 'text-orange-400 bg-white/10'
+                        : 'text-[#C5B3A1] hover:text-white hover:bg-white/5'
+                    }`}
+                    aria-expanded={isOpen}
+                    aria-haspopup="true"
+                  >
+                    <span>{cat.label}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180 text-orange-400' : 'text-[#8A7969]'
+                      }`}
+                    />
+                  </button>
+
+                  {/* Dropdown Menu Panel */}
+                  {isOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl ch-dropdown-menu p-3 z-50 animate-fadeIn">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-orange-400/90 px-3 py-1.5 flex items-center gap-1.5 border-b border-white/5 mb-1.5">
+                        <IconComponent className="w-3.5 h-3.5" />
+                        <span>หมวดหมู่: {cat.label}</span>
+                      </div>
+
+                      <div className="space-y-1">
+                        {cat.items.map((item, idx) => {
+                          const ItemIcon = item.icon;
+                          const isModalTrigger = item.href.startsWith('#join-network');
+
+                          if (isModalTrigger) {
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setOpenDropdown(null);
+                                  setJoinModalOpen(true);
+                                }}
+                                className="w-full text-left p-2.5 rounded-xl ch-sub-item flex items-start gap-3 group/sub"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5 group-hover/sub:bg-orange-600 group-hover/sub:text-white transition-colors">
+                                  <ItemIcon className="w-4 h-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-semibold text-sm group-hover/sub:text-orange-300 transition-colors">
+                                      {item.title}
+                                    </span>
+                                    {item.badge && (
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                        {item.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-[#9B8C7E] mt-0.5 line-clamp-1">
+                                    {item.description}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <a
+                              key={idx}
+                              href={item.href}
+                              target={item.isExternal ? '_blank' : undefined}
+                              rel={item.isExternal ? 'noopener noreferrer' : undefined}
+                              onClick={() => setOpenDropdown(null)}
+                              className="p-2.5 rounded-xl ch-sub-item flex items-start gap-3 group/sub"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-white/5 text-[#D8C7B6] flex items-center justify-center shrink-0 mt-0.5 group-hover/sub:bg-orange-600 group-hover/sub:text-white transition-colors">
+                                <ItemIcon className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-semibold text-sm group-hover/sub:text-orange-300 transition-colors">
+                                    {item.title}
+                                  </span>
+                                  {item.badge && (
+                                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                  {item.isExternal && (
+                                    <ArrowUpRight className="w-3.5 h-3.5 text-[#8A7969] group-hover/sub:text-white transition-colors ml-auto" />
+                                  )}
+                                </div>
+                                <p className="text-xs text-[#9B8C7E] mt-0.5 line-clamp-1">
+                                  {item.description}
+                                </p>
+                              </div>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
 
-          {/* Desktop Right Actions */}
+          {/* Desktop Right Action Buttons */}
           <div className="hidden lg:flex items-center gap-3">
-            <button
-              onClick={() => {
-                const searchEl = document.getElementById('ch-search-input');
-                if (searchEl) searchEl.focus();
-              }}
-              className="p-2.5 text-[#C5B3A1] hover:text-white rounded-full hover:bg-white/5 transition-colors"
-              aria-label="ค้นหาข้อมูล"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            
             <a
               href="https://coffee-phupan.ai.studio/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3.5 py-2 rounded-full text-xs font-bold text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 hover:text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/50 transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 rounded-full text-xs font-bold text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 hover:text-emerald-200 bg-emerald-950/50 hover:bg-emerald-900/60 transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.02]"
             >
               <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              AI Studio กาแฟภูพาน
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </a>
-
-            <a
-              href="/js-develop"
-              className="px-4 py-2 rounded-full text-sm font-semibold text-white/90 border border-white/20 hover:border-orange-500 hover:text-orange-400 bg-white/5 hover:bg-white/10 transition-all"
-            >
-              ระบบ JS DEVELOP
+              <span>AI Studio กาแฟภูพาน</span>
+              <ArrowUpRight className="w-3.5 h-3.5 opacity-70" />
             </a>
 
             <button
               onClick={() => setJoinModalOpen(true)}
-              className="px-5 py-2 rounded-full text-sm font-semibold text-white bg-[#EA580C] hover:bg-[#D94E07] shadow-md shadow-orange-900/30 transition-all transform active:scale-95"
+              className="px-5 py-2 rounded-full text-xs font-bold text-white bg-gradient-to-r from-[#EA580C] to-[#C2410C] hover:from-[#F97316] hover:to-[#EA580C] shadow-md shadow-orange-900/30 transition-all transform active:scale-95"
             >
-              เข้าสู่ระบบ
+              ร่วมเครือข่าย / เข้าสู่ระบบ
             </button>
           </div>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            className="lg:hidden p-2 text-white/90 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
             aria-label={mobileMenuOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
           >
             {mobileMenuOpen ? <X className="w-7 h-7" /> : <MenuIcon className="w-7 h-7" />}
           </button>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Navigation Drawer with Accordion Submenus */}
         {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-white/10 bg-[#160B05] px-2 space-y-2 animate-fadeIn">
+          <div className="lg:hidden py-4 border-t border-white/10 bg-[#160B05] px-3 space-y-2 animate-fadeIn max-h-[85vh] overflow-y-auto">
             <a
-              href="/coffee-home"
+              href="/"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2.5 rounded-xl font-medium text-white bg-white/10 text-base"
+              className="block px-4 py-2.5 rounded-xl font-semibold text-white bg-white/10 text-base"
             >
               หน้าแรก
             </a>
-            <a
-              href="#pathway-plantation"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2.5 rounded-xl font-medium text-[#D8C7B6] hover:bg-white/5 text-base"
-            >
-              แหล่งปลูกกาแฟ
-            </a>
-            <a
-              href="#ch-network-map"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2.5 rounded-xl font-medium text-[#D8C7B6] hover:bg-white/5 text-base"
-            >
-              ร้าน 456 Coffee
-            </a>
-            <a
-              href="#pathway-academy"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2.5 rounded-xl font-medium text-[#D8C7B6] hover:bg-white/5 text-base"
-            >
-              Coffee Academy
-            </a>
-            <a
-              href="#ch-news-section"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2.5 rounded-xl font-medium text-[#D8C7B6] hover:bg-white/5 text-base"
-            >
-              ข่าวสาร
-            </a>
-            <a
-              href="https://coffee-phupan.ai.studio/"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-4 py-2.5 rounded-xl font-semibold text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/50 text-base"
-            >
-              <span className="flex items-center gap-2">
+
+            {/* Mobile Accordion Categories */}
+            {navCategories.map((cat) => {
+              const isExpanded = mobileExpandedCat === cat.id;
+              const CatIcon = cat.icon;
+              return (
+                <div key={cat.id} className="rounded-xl border border-white/5 overflow-hidden bg-white/[0.02]">
+                  <button
+                    onClick={() => setMobileExpandedCat(isExpanded ? null : cat.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left font-semibold text-white/90 hover:text-white"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CatIcon className="w-4 h-4 text-orange-400" />
+                      <span>{cat.label}</span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isExpanded ? 'rotate-180 text-orange-400' : 'text-[#8A7969]'
+                      }`}
+                    />
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-3 pb-3 space-y-1 bg-black/20 border-t border-white/5">
+                      {cat.items.map((sub, sIdx) => {
+                        const SubIcon = sub.icon;
+                        if (sub.href.startsWith('#join-network')) {
+                          return (
+                            <button
+                              key={sIdx}
+                              onClick={() => {
+                                setMobileMenuOpen(false);
+                                setJoinModalOpen(true);
+                              }}
+                              className="w-full text-left p-2.5 rounded-lg text-xs flex items-center justify-between text-[#D8C7B6] hover:bg-white/5"
+                            >
+                              <span className="flex items-center gap-2">
+                                <SubIcon className="w-3.5 h-3.5 text-orange-400" />
+                                {sub.title}
+                              </span>
+                              <ChevronRight className="w-3.5 h-3.5 text-orange-400" />
+                            </button>
+                          );
+                        }
+                        return (
+                          <a
+                            key={sIdx}
+                            href={sub.href}
+                            target={sub.isExternal ? '_blank' : undefined}
+                            rel={sub.isExternal ? 'noopener noreferrer' : undefined}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center justify-between p-2.5 rounded-lg text-xs text-[#D8C7B6] hover:bg-white/5"
+                          >
+                            <span className="flex items-center gap-2">
+                              <SubIcon className="w-3.5 h-3.5 text-orange-400" />
+                              {sub.title}
+                            </span>
+                            {sub.isExternal ? (
+                              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-white/30" />
+                            )}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="pt-2 space-y-2">
+              <a
+                href="https://coffee-phupan.ai.studio/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40"
+              >
                 <Sparkles className="w-4 h-4 text-emerald-400" />
-                AI Studio กาแฟภูพาน
-              </span>
-              <ExternalLink className="w-4 h-4 text-emerald-400" />
-            </a>
-            <a
-              href="/js-develop"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2.5 rounded-xl font-medium text-orange-400 hover:bg-white/5 text-base"
-            >
-              ไปยังหน้า JS DEVELOP
-            </a>
-            <div className="pt-2">
+                เข้าใช้งาน AI Studio กาแฟภูพาน
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
+
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -383,7 +612,7 @@ export default function CoffeeHubHomepage() {
                 }}
                 className="w-full py-3 rounded-xl font-bold text-center text-white bg-gradient-to-r from-[#EA580C] to-[#C2410C] shadow-lg"
               >
-                เข้าสู่ระบบ / เข้าร่วมเครือข่าย
+                ร่วมเครือข่าย / เข้าสู่ระบบ
               </button>
             </div>
           </div>
@@ -391,659 +620,690 @@ export default function CoffeeHubHomepage() {
       </header>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 2. HERO SECTION */}
+      {/* 2. HERO SECTION - CLEAN, VIBRANT, INSPIRING */}
       {/* ────────────────────────────────────────────────────────── */}
-      <section className="relative px-4 sm:px-6 lg:px-8 pt-8 pb-12 sm:pt-14 sm:pb-16 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <section className="relative px-4 sm:px-6 lg:px-8 pt-10 pb-14 sm:pt-16 sm:pb-20 max-w-7xl mx-auto overflow-hidden">
+        {/* Ambient Glows */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
           
-          {/* Left Column: Headline, Description & Search Bar (Desktop) */}
-          <div className="lg:col-span-7 space-y-6 z-10">
-            <div className="space-y-3">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-[1.2] tracking-tight">
-                ทุกเรื่องของกาแฟ <br />
-                <span className="ch-hero-gradient-text">เริ่มต้นได้ที่นี่</span>
-              </h1>
-              <p className="text-[#C8B8A6] text-base sm:text-lg max-w-xl font-normal leading-relaxed">
-                เชื่อมโยงคนรักกาแฟ เกษตรกร คาเฟ่ และองค์ความรู้ สู่ระบบนิเวศกาแฟไทยที่ยั่งยืน
-              </p>
-            </div>
-
-            {/* ────────────────────────────────────────────────────────── */}
-            {/* 3. SEARCH BAR COMPONENT */}
-            {/* ────────────────────────────────────────────────────────── */}
-            <div className="pt-2">
-              <form
-                onSubmit={handleSearchSubmit}
-                className="ch-search-container flex items-center rounded-full p-1.5 sm:p-2 max-w-2xl"
-              >
-                <div className="pl-3 sm:pl-4 text-[#A89887]">
-                  <Search className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-                <label htmlFor="ch-search-input" className="sr-only">
-                  ค้นหาร้านกาแฟ แหล่งปลูก หลักสูตร
-                </label>
-                <input
-                  id="ch-search-input"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ค้นหาร้านกาแฟ แหล่งปลูก หลักสูตร"
-                  className="w-full bg-transparent text-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base placeholder-[#8A7969] focus:outline-none font-medium"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="p-1 text-[#A89887] hover:text-white mr-1"
-                    aria-label="ล้างคำค้นหา"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] flex items-center justify-center shrink-0 shadow-lg shadow-orange-950/50 text-white transition-transform active:scale-90"
-                  aria-label="เริ่มการค้นหา"
-                >
-                  <Search className="w-5 h-5" />
-                </button>
-              </form>
-
-              {/* Quick Search Chips */}
-              <div className="flex flex-wrap items-center gap-2 pt-3 text-xs text-[#A89887]">
-                <span className="font-medium">คำค้นแนะนำ:</span>
-                {['กาฬสินธุ์', 'สาขาหลัก', 'โรบัสต้า', 'Academy', 'แปลงปลูก'].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setChipSearch(chip)}
-                    className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-[#C8B8A6] hover:text-orange-300 transition-colors border border-white/5"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Hero Visual - Ripe Coffee Cherries & Roasted Beans */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
-            <div className="relative w-full max-w-md lg:max-w-none aspect-[4/3] sm:aspect-[16/11] rounded-3xl overflow-hidden border border-white/15 shadow-2xl shadow-black/80 group">
-              <img
-                src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=1200&auto=format&fit=crop"
-                alt="เมล็ดกาแฟ ใบกาแฟ และผลกาแฟเชอรี่สุกบนกิ่งธรรมชาติ"
-                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                loading="eager"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#160B05]/90 via-[#160B05]/20 to-transparent pointer-events-none" />
-              
-              {/* Badge overlay on Hero image */}
-              <div className="absolute bottom-4 left-4 right-4 p-3 sm:p-4 rounded-2xl bg-[#1A0E07]/80 backdrop-blur-md border border-white/10 flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-orange-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" /> Robusta Phu Phan Origin
-                  </div>
-                  <div className="text-white text-sm font-semibold">
-                    กาแฟอัตลักษณ์เทือกเขาภูพาน กาฬสินธุ์
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-orange-600/30 flex items-center justify-center text-orange-400">
-                  <Coffee className="w-4 h-4" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 4. THREE PATHWAY CARDS */}
-      {/* ────────────────────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          
-          {/* Pathway 1: ต้นน้ำ · การปลูกกาแฟ */}
-          <div
-            id="pathway-plantation"
-            onClick={() => {
-              const el = document.getElementById('ch-news-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="ch-pathway-plantation ch-card p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer group"
-            role="button"
-            tabIndex={0}
-            aria-label="ต้นน้ำ · การปลูกกาแฟ"
-          >
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                  <Sprout className="w-4 h-4" />
-                </div>
-                <h2 className="text-white font-bold text-base sm:text-lg group-hover:text-emerald-300 transition-colors">
-                  ต้นน้ำ · การปลูกกาแฟ
-                </h2>
-              </div>
-              <p className="text-xs sm:text-sm text-[#A5C2AE] font-normal line-clamp-1">
-                แหล่งปลูก สายพันธุ์ ความรู้เกษตรกรกาแฟ
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-16 sm:w-20 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-emerald-500/30">
-                <img
-                  src="https://images.unsplash.com/photo-1524350876685-274059332603?q=80&w=400&auto=format&fit=crop"
-                  alt="ไร่กาแฟและแปลงปลูกบนภูเขา"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              <ChevronRight className="w-5 h-5 text-emerald-400 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Pathway 2: คาเฟ่ · ร้านกาแฟ 456 Coffee */}
-          <div
-            id="pathway-cafe"
-            onClick={() => {
-              const el = document.getElementById('ch-network-map');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="ch-pathway-cafe ch-card p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer group"
-            role="button"
-            tabIndex={0}
-            aria-label="คาเฟ่ · ร้านกาแฟ 456 Coffee"
-          >
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center">
-                  <Coffee className="w-4 h-4" />
-                </div>
-                <h2 className="text-white font-bold text-base sm:text-lg group-hover:text-orange-300 transition-colors">
-                  คาเฟ่ · ร้านกาแฟ 456 Coffee
-                </h2>
-              </div>
-              <p className="text-xs sm:text-sm text-[#CDB7A3] font-normal line-clamp-1">
-                สาขาหลัก อำเภอเมืองกาฬสินธุ์
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-16 sm:w-20 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-orange-500/30">
-                <img
-                  src="/cafe-main.jpg"
-                  alt="456 Coffee สาขาหลัก กาฬสินธุ์"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              <ChevronRight className="w-5 h-5 text-orange-400 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Pathway 3: Coffee Academy */}
-          <div
-            id="pathway-academy"
-            onClick={() => setJoinModalOpen(true)}
-            className="ch-pathway-academy ch-card p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer group"
-            role="button"
-            tabIndex={0}
-            aria-label="Coffee Academy"
-          >
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                  <GraduationCap className="w-4 h-4" />
-                </div>
-                <h2 className="text-white font-bold text-base sm:text-lg group-hover:text-amber-300 transition-colors">
-                  Coffee Academy
-                </h2>
-              </div>
-              <p className="text-xs sm:text-sm text-[#D7C2A9] font-normal line-clamp-1">
-                คอร์สเรียน องค์ความรู้ และงานอบรม
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-16 sm:w-20 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-amber-500/30">
-                <img
-                  src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400&auto=format&fit=crop"
-                  alt="สมุดบันทึกและเมล็ดกาแฟคั่วสำหรับการเรียนรู้"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              <ChevronRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-        </div>
-
-        {/* Featured AI Connection Banner */}
-        <div className="mt-5 sm:mt-6 p-4 sm:p-6 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#1C120A] to-[#160B05] border border-emerald-500/35 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-emerald-700/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-inner">
-              <Sparkles className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-white font-bold text-base sm:text-lg">
-                  AI Studio กาแฟภูพาน
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase tracking-wide">
-                  AI Powered Studio
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-[#C8D7CD] mt-1 max-w-2xl leading-relaxed">
-                ระบบปัญญาประดิษฐ์ (AI) วิเคราะห์สายพันธุ์กาแฟโรบัสต้าภูพาน เทคนิคการเพาะปลูก และระบบสารสนเทศกาแฟอัตลักษณ์
-              </p>
-            </div>
-          </div>
-          <a
-            href="https://coffee-phupan.ai.studio/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border border-emerald-400/40 shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shrink-0"
-          >
-            <span>เข้าสู่ระบบ AI Studio</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 5. 456 COFFEE STORE REAL LOCATION & MAP SECTION */}
-      {/* ────────────────────────────────────────────────────────── */}
-      <section id="ch-network-map" className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-7xl mx-auto">
-        <div className="ch-card p-5 sm:p-7 space-y-6 border border-orange-500/25">
-          
-          {/* Section Header with Real Store Title & Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600/20 text-[#EA580C] flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-[#EA580C]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                    แผนที่และตำแหน่งร้าน 456 Coffee
-                  </h2>
-                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    ข้อมูลจริง ({branchesList.length} สาขา)
-                  </span>
-                </div>
-                <p className="text-xs text-[#A89887]">
-                  {realStore.shortAddress} ({realStore.hours})
-                </p>
-              </div>
-            </div>
-
-            {/* Direct Google Maps Action Buttons */}
-            <div className="flex items-center gap-2">
-              <a
-                href={realStore.googleMapsDirectionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#EA580C] text-white hover:bg-[#D94E07] shadow-md shadow-orange-950/40 transition-all"
-              >
-                <Navigation className="w-3.5 h-3.5" />
-                <span>นำทางด้วย Google Maps</span>
-              </a>
-
-              <button
-                type="button"
-                onClick={copyCoordinates}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-white/5 text-[#D8C7B6] border border-white/10 hover:bg-white/10 hover:text-white transition-all"
-                title="คัดลอกพิกัด GPS"
-              >
-                {copiedCoordinates ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400 font-semibold">คัดลอกแล้ว</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">คัดลอกพิกัด</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Branch Switcher Buttons */}
-          {branchesList.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-xs text-[#A89887] font-semibold flex items-center gap-1.5 mr-1">
-                <Coffee className="w-3.5 h-3.5 text-orange-400" /> เลือกสาขาที่ต้องการดู:
-              </span>
-              {branchesList.map((branch, idx) => (
-                <button
-                  key={branch.id || idx}
-                  type="button"
-                  onClick={() => setSelectedBranchIndex(idx)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    selectedBranchIndex === idx
-                      ? 'bg-[#EA580C] text-white shadow-md shadow-orange-950/40 scale-105'
-                      : 'bg-white/5 hover:bg-white/10 text-[#C8B8A6] border border-white/10'
-                  }`}
-                >
-                  <MapPin className="w-3 h-3" />
-                  <span>{branch.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Map & Real Location Card Container (2-Column Desktop, Stacked Mobile) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Left Column: Headline & Value Proposition */}
+          <div className="lg:col-span-7 space-y-6">
             
-            {/* Column 1: Interactive Google Maps Frame (pinned on exact GPS) */}
-            <div className="lg:col-span-7 ch-map-frame h-[320px] sm:h-[400px] lg:h-[460px] bg-[#1a0f07] relative rounded-2xl overflow-hidden border border-white/10">
-              <iframe
-                title="Google Maps - 456 Coffee สาขาหลัก กาฬสินธุ์"
-                src={realStore.embedMapUrl}
-                className="w-full h-full border-0 filter contrast-[1.05] brightness-[0.95]"
-                allowFullScreen={false}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+            {/* Origin Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-orange-600/20 via-orange-600/10 to-transparent border border-orange-500/30 text-orange-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+              <span>ระบบนิเวศกาแฟโรบัสต้าภูพาน • Kalasin Origin</span>
+            </div>
 
-              {/* Map Floating Pin Overlay Indicator */}
-              <div className="absolute top-4 left-4 bg-[#140A04]/90 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10 flex items-center gap-2.5 shadow-xl text-xs pointer-events-none">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500" />
-                </span>
-                <div className="leading-tight">
-                  <div className="text-white font-bold">456 Coffee สาขาหลัก</div>
-                  <div className="text-[10px] text-[#A89887]">หน้าศูนย์ราชการ จ.กาฬสินธุ์</div>
-                </div>
-              </div>
+            {/* Main Headline */}
+            <div className="space-y-3">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
+                COFFEE <span className="ch-hero-gradient-text">FARM</span>
+              </h1>
+              <p className="text-lg sm:text-xl text-[#E8D8C8] font-semibold leading-relaxed">
+                จากยอดภูพาน สู่คาเฟ่มาตรฐานสากล ขับเคลื่อนด้วยเทคโนโลยี AI
+              </p>
+            </div>
 
-              {/* Floating Bottom Link */}
+            {/* Uncluttered Narrative Paragraph */}
+            <p className="text-sm sm:text-base text-[#B8A796] leading-relaxed max-w-2xl font-normal">
+              เชื่อมโยงเกษตรกรแปลงปลูก สถาบันอบรมบาริสต้ามืออาชีพ และเครือข่ายร้านกาแฟ 456 Coffee 
+              ด้วยการวิเคราะห์สายพันธุ์และเทคนิคการเพาะปลูกอัจฉริยะ เพื่อสร้างคุณค่าและรสชาติกาแฟไทยที่ยั่งยืน
+            </p>
+
+            {/* Direct Dual CTAs */}
+            <div className="flex flex-wrap items-center gap-3.5 pt-2">
               <a
-                href={realStore.googleMapsDirectionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute bottom-4 right-4 bg-[#140A04]/90 hover:bg-[#EA580C] hover:text-white backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-[#D8C7B6] flex items-center gap-1.5 shadow-lg transition-all"
+                href="#ecosystem-pillars"
+                className="px-6 py-3.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-[#EA580C] to-[#C2410C] hover:from-[#F97316] hover:to-[#EA580C] shadow-lg shadow-orange-950/50 flex items-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95"
               >
-                <span>เปิดแผนที่ใหญ่</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <span>สำรวจ 3 เสาหลัก</span>
+                <ChevronRight className="w-4 h-4" />
               </a>
-            </div>
 
-            {/* Column 2: Exclusive Real Store Card */}
-            <div className="lg:col-span-5 flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-[#1C0F08] border border-orange-500/30 shadow-xl space-y-4">
-              
-              <div className="space-y-4">
-                {/* Real Photo with Tag */}
-                <div className="aspect-[16/10] w-full rounded-xl overflow-hidden border border-white/15 relative bg-black/50 group">
-                  <img
-                    src={realStore.imageUrl}
-                    alt={realStore.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-                  
-                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold bg-[#EA580C] text-white shadow-md">
-                    {realStore.tagline}
-                  </span>
-                  
-                  <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <p className="text-xs text-orange-300 font-medium">ภาพถ่ายร้านจริง</p>
-                    <h3 className="text-base sm:text-lg font-extrabold drop-shadow">
-                      {realStore.name}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Details List */}
-                <div className="space-y-2.5 text-xs text-[#D8C7B6]">
-                  <div className="flex items-start gap-2.5">
-                    <MapPin className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="text-white font-semibold">ที่ตั้งร้าน:</span>{' '}
-                      <span>{realStore.address}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <Clock className="w-4 h-4 text-orange-400 shrink-0" />
-                    <div>
-                      <span className="text-white font-semibold">เวลาทำการ:</span>{' '}
-                      <span className="text-emerald-400 font-medium">{realStore.hours}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <Phone className="w-4 h-4 text-orange-400 shrink-0" />
-                    <div>
-                      <span className="text-white font-semibold">โทรศัพท์:</span>{' '}
-                      <a href={`tel:${realStore.phone.replace(/-/g, '')}`} className="text-white hover:text-orange-300 font-bold underline decoration-orange-500/50">
-                        {realStore.phone}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Store Description */}
-                <p className="text-xs text-[#A89887] leading-relaxed pt-1 border-t border-white/5">
-                  {realStore.description}
-                </p>
-
-                {/* Store Highlights Tags */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
-                    ☕ Specialty Coffee & Slow bar
-                  </span>
-                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
-                    🌿 กาแฟโรบัสต้าภูพานคั่วสด
-                  </span>
-                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
-                    🚗 มีที่จอดรถสะดวกสบาย
-                  </span>
-                  <span className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/5 text-[#C8B8A6] border border-white/10">
-                    📶 มี Wi-Fi & ปลั๊กไฟ
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-2 space-y-2">
-                <a
-                  href={realStore.googleMapsDirectionsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white bg-[#EA580C] hover:bg-[#D94E07] shadow-lg shadow-orange-950/40 flex items-center justify-center gap-2 transition-all"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span>เริ่มนำทางด้วย Google Maps</span>
-                </a>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <a
-                    href={`tel:${realStore.phone.replace(/-/g, '')}`}
-                    className="py-2.5 px-3 rounded-xl font-semibold text-white bg-white/10 hover:bg-white/15 flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-orange-400" />
-                    <span>โทรติดต่อร้าน</span>
-                  </a>
-
-                  <button
-                    type="button"
-                    onClick={copyCoordinates}
-                    className="py-2.5 px-3 rounded-xl font-semibold text-[#D8C7B6] bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    {copiedCoordinates ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">คัดลอกสำเร็จ!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-orange-400" />
-                        <span>คัดลอกพิกัด</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 6. NEWS FROM COFFEE HUB SECTION */}
-      {/* ────────────────────────────────────────────────────────── */}
-      <section id="ch-news-section" className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
-        <div className="space-y-6">
-          
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-orange-600/20 text-[#EA580C] flex items-center justify-center">
-                <FileText className="w-5 h-5 text-[#EA580C]" />
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  ข่าวสารจาก Coffee HUB
-                </h2>
-                <p className="text-xs text-[#A89887]">
-                  อัปเดตความเคลื่อนไหว กิจกรรมชุมชน และบทความความรู้เรื่องกาแฟ
-                </p>
-              </div>
-            </div>
-
-            <a
-              href="#ch-news-section"
-              className="text-xs text-orange-400 hover:text-orange-300 font-semibold flex items-center gap-1"
-            >
-              ดูทั้งหมด <ChevronRight className="w-4 h-4" />
-            </a>
-          </div>
-
-          {/* News Cards Grid (3 Columns on Desktop, Stacked on Mobile) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {filteredNews.map((news) => (
-              <article
-                key={news.id}
-                onClick={() => alert(`ข่าวสาร: ${news.title}\n\n${news.summary}\nวันที่: ${news.date}`)}
-                className="ch-card p-4 rounded-2xl flex flex-col justify-between space-y-4 cursor-pointer group"
-                tabIndex={0}
-              >
-                <div className="space-y-3">
-                  <div className="aspect-[16/10] rounded-xl overflow-hidden border border-white/10 relative">
-                    <img
-                      src={news.imageUrl}
-                      alt={news.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#140A04]/80 backdrop-blur-md text-orange-400 border border-white/10">
-                      {news.category}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h3 className="text-white font-bold text-base group-hover:text-orange-400 transition-colors line-clamp-2">
-                      {news.title}
-                    </h3>
-                    <p className="text-xs text-[#C8B8A6] font-normal line-clamp-2 leading-relaxed">
-                      {news.summary}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-[#8A7969]">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-orange-400" />
-                    <span>{news.date}</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-orange-400 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </article>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 7. GOOGLE ADSENSE PLACEHOLDER BANNER */}
-      {/* ────────────────────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 lg:px-8 py-4 max-w-7xl mx-auto">
-        <div
-          className="ch-adsense-banner"
-          role="region"
-          aria-label="พื้นที่โฆษณา Google AdSense"
-        >
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-[#A89887] bg-black/5 px-2 py-0.5 rounded">
-              Sponsored
-            </span>
-            <span>พื้นที่โฆษณา Google AdSense (รองรับขนาด Responsive Desktop & Mobile)</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 8. JOIN NETWORK CTA BUTTON & BANNER */}
-      {/* ────────────────────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
-        <button
-          onClick={() => setJoinModalOpen(true)}
-          className="ch-join-btn w-full text-base sm:text-lg group"
-          aria-label="เข้าร่วมเครือข่าย 456 COFFEE HUB"
-        >
-          <Users className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-          <span>เข้าร่วมเครือข่าย 456 COFFEE HUB</span>
-          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 group-hover:translate-x-1 transition-transform" />
-        </button>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 9. FOOTER SECTION */}
-      {/* ────────────────────────────────────────────────────────── */}
-      <footer id="ch-footer-section" className="bg-[#0B0401] border-t border-white/10 mt-12 py-10 px-4 sm:px-6 lg:px-8 text-[#A89887]">
-        <div className="max-w-7xl mx-auto space-y-8">
-          
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white">
-                <Coffee className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-lg text-white">456 COFFEE</span>
-                  <span className="px-1.5 py-0.2 text-[10px] font-bold text-orange-400 border border-orange-500/40 rounded bg-orange-600/10">
-                    HUB
-                  </span>
-                </div>
-                <p className="text-xs text-[#8A7969]">Good Coffee · Better People · Stronger Communities</p>
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-[#C8B8A6]">
-              <a href="#pathway-plantation" className="hover:text-white transition-colors">แปลงปลูก</a>
-              <a href="#ch-network-map" className="hover:text-white transition-colors">ร้านกาแฟ</a>
-              <a href="#pathway-academy" className="hover:text-white transition-colors">Academy</a>
               <a
                 href="https://coffee-phupan.ai.studio/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                className="px-5 py-3.5 rounded-xl font-bold text-sm text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 hover:border-emerald-400 hover:text-emerald-200 transition-all flex items-center gap-2 shadow-sm hover:scale-[1.02]"
               >
-                <Sparkles className="w-3.5 h-3.5" /> AI กาแฟภูพาน
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span>เปิดใช้งาน AI Studio</span>
+                <ArrowUpRight className="w-4 h-4 opacity-80" />
               </a>
-              <a href="#ch-news-section" className="hover:text-white transition-colors">ข่าวสาร</a>
-              <a href="/js-develop" className="text-orange-400 hover:text-orange-300 font-semibold">
-                หน้าหลัก JS DEVELOP
-              </a>
+            </div>
+
+            {/* 4 Clean Stat Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+              <div className="ch-stat-pill p-3 rounded-xl">
+                <div className="text-lg sm:text-xl font-black text-white">1,200+</div>
+                <div className="text-[11px] text-[#A68A78] font-medium">ไร่แปลงปลูกภูพาน</div>
+              </div>
+              <div className="ch-stat-pill p-3 rounded-xl">
+                <div className="text-lg sm:text-xl font-black text-emerald-400">100%</div>
+                <div className="text-[11px] text-[#A68A78] font-medium">โรบัสต้าคั่วสดแท้</div>
+              </div>
+              <div className="ch-stat-pill p-3 rounded-xl">
+                <div className="text-lg sm:text-xl font-black text-amber-400">1 สถาบัน</div>
+                <div className="text-[11px] text-[#A68A78] font-medium">Academy อบรมคาเฟ่</div>
+              </div>
+              <div className="ch-stat-pill p-3 rounded-xl">
+                <div className="text-lg sm:text-xl font-black text-orange-400">AI Model</div>
+                <div className="text-[11px] text-[#A68A78] font-medium">วิเคราะห์เพาะปลูก</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column: Hero Visual Card */}
+          <div className="lg:col-span-5 relative flex items-center justify-center">
+            <div className="relative w-full max-w-md lg:max-w-none aspect-[4/3] rounded-3xl overflow-hidden border border-white/15 shadow-2xl shadow-black/80 group">
+              <img
+                src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=1200&auto=format&fit=crop"
+                alt="เมล็ดกาแฟและผลกาแฟเชอรี่สุกบนกิ่งธรรมชาติ"
+                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#120904]/90 via-[#120904]/30 to-transparent pointer-events-none" />
+              
+              {/* Badge overlay on Hero image */}
+              <div className="absolute bottom-4 left-4 right-4 p-3.5 rounded-2xl bg-[#1A0E07]/85 backdrop-blur-md border border-white/15 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] text-orange-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" /> Robusta Phu Phan
+                  </div>
+                  <div className="text-white text-sm font-bold">
+                    กาแฟอัตลักษณ์เทือกเขาภูพาน กาฬสินธุ์
+                  </div>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-orange-600/30 border border-orange-500/40 flex items-center justify-center text-orange-400">
+                  <Coffee className="w-5 h-5" />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <p>© {new Date().getFullYear()} 456 COFFEE HUB. สงวนลิขสิทธิ์ทุกประการ.</p>
-            <p className="text-[#8A7969]">
-              ขับเคลื่อนระบบนิเวศกาแฟไทย จากยอดภูพานสู่ร้านกาแฟทั่วประเทศ
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 3. THREE CORE PILLARS OF ECOSYSTEM (สะอาด ชัดเจน ไม่ซับซ้อน) */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section id="ecosystem-pillars" className="px-4 sm:px-6 lg:px-8 py-10 max-w-7xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto space-y-2 mb-8">
+          <div className="text-xs font-bold text-orange-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+            <Layers className="w-3.5 h-3.5" /> 3 เสาหลัก 456 COFFEE
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            ระบบนิเวศกาแฟครบวงจร
+          </h2>
+          <p className="text-sm text-[#A89887]">
+            เชื่อมโยงกระบวนการผลิตตั้งแต่แปลงปลูกสู่ถ้วยกาแฟคุณภาพ
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          {/* Pillar 1: ต้นน้ำ · แหล่งปลูก */}
+          <div
+            id="pathway-plantation"
+            className="ch-card ch-pathway-plantation p-6 rounded-2xl flex flex-col justify-between space-y-5"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center">
+                <Sprout className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  ต้นน้ำ (Origin)
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  แหล่งปลูก & พันธุ์กาแฟ
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-[#B7D2BF] leading-relaxed">
+                พื้นที่ปลูกกาแฟโรบัสต้าบนแนวเทือกเขาภูพาน กาฬสินธุ์ ดินอุดมสมบูรณ์และสภาพอากาศจำเพาะ ส่งเสริมเกษตรกรด้วยต้นกล้าสายพันธุ์ดี
+              </p>
+            </div>
+            
+            <button
+              onClick={() => setJoinModalOpen(true)}
+              className="w-full py-2.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600 border border-emerald-500/40 text-emerald-200 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <span>สั่งจองต้นกล้ากาแฟ</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Pillar 2: กลางน้ำ · Coffee Academy */}
+          <div
+            id="pathway-academy"
+            className="ch-card ch-pathway-academy p-6 rounded-2xl flex flex-col justify-between space-y-5"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  กลางน้ำ (Academy)
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  456 Coffee Academy
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-[#DFCEA7] leading-relaxed">
+                สถาบันพัฒนาทักษะบาริสต้า เทคนิคการสกัด การคั่ว Cupping และการบริหารต้นทุนร้านกาแฟอย่างมืออาชีพ เพื่อสร้างอาชีพที่มั่นคง
+              </p>
+            </div>
+            
+            <button
+              onClick={() => setJoinModalOpen(true)}
+              className="w-full py-2.5 rounded-xl bg-amber-600/30 hover:bg-amber-600 border border-amber-500/40 text-amber-200 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <span>ลงทะเบียนหลักสูตรอบรม</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Pillar 3: ปลายน้ำ · ร้านคาเฟ่ 456 Coffee */}
+          <div
+            id="pathway-cafe"
+            className="ch-card ch-pathway-cafe p-6 rounded-2xl flex flex-col justify-between space-y-5"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center">
+                <Coffee className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">
+                  ปลายน้ำ (Cafe)
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  ร้าน 456 Coffee & สาขา
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-[#D7C2B2] leading-relaxed">
+                คาเฟ่เรือนไม้ 2 ชั้น สาขาหลัก อ.เมือง จ.กาฬสินธุ์ บรรยากาศร่มรื่น เสิร์ฟเมนูกาแฟโรบัสต้าคั่วสดและ Specialty Coffee หลากหลาย
+              </p>
+            </div>
+            
+            <a
+              href="#ch-network-map"
+              className="w-full py-2.5 rounded-xl bg-orange-600/30 hover:bg-orange-600 border border-orange-500/40 text-orange-200 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <span>ดูตำแหน่งสาขา & แผนที่</span>
+              <ChevronRight className="w-4 h-4" />
+            </a>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 4. DIGITAL SUITE & AI (เทคโนโลยีในเครือข่าย) */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section className="px-4 sm:px-6 lg:px-8 py-10 max-w-7xl mx-auto">
+        <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#1A0E07] via-[#160B04] to-[#0E0602] border border-white/10 shadow-2xl space-y-6">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+            <div>
+              <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Bot className="w-4 h-4" /> Connected Digital Ecosystem
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+                เทคโนโลยีดิจิทัลเชื่อมต่อทั้งระบบ
+              </h2>
+            </div>
+            <span className="text-xs text-[#8A7969]">
+              ขับเคลื่อนด้วยระบบคลาวด์และ AI แบบเรียลไทม์
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Card 1: AI Studio กาแฟภูพาน */}
+            <a
+              href="https://coffee-phupan.ai.studio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-900/40 transition-all group flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    AI Studio
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1">
+                    AI Studio กาแฟภูพาน
+                  </h3>
+                  <p className="text-xs text-[#A8C4B0] mt-1 leading-relaxed">
+                    ระบบ AI อัจฉริยะวิเคราะห์สายพันธุ์และเทคนิคการเพาะปลูกกาแฟภูพาน
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
+                <span>เข้าสู่ระบบ AI</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+            {/* Card 2: แอปสั่งซื้อลูกค้า */}
+            <a
+              href="https://order.coffee-cafe.shop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-orange-500/40 hover:bg-white/10 transition-all group flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                    Web App
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white group-hover:text-orange-300 transition-colors">
+                    แอปสั่งซื้อลูกค้า
+                  </h3>
+                  <p className="text-xs text-[#9B8C7E] mt-1 leading-relaxed">
+                    สั่งกาแฟล่วงหน้า เลือกความหวาน และสะสมแต้มสมาชิกผ่านมือถือ
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-orange-400 group-hover:text-orange-300">
+                <span>order.coffee-cafe.shop</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+            {/* Card 3: ระบบ POS สาขา */}
+            <a
+              href="https://pos.coffee-cafe.shop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-500/40 hover:bg-white/10 transition-all group flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center">
+                    <Monitor className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    Branch POS
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
+                    ระบบแคชเชียร์สาขา
+                  </h3>
+                  <p className="text-xs text-[#9B8C7E] mt-1 leading-relaxed">
+                    ระบบขายหน้าร้าน พร้อมจอแสดงผลสองฝั่ง และตัดสต็อกสินค้าอัตโนมัติ
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-amber-400 group-hover:text-amber-300">
+                <span>pos.coffee-cafe.shop</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+            {/* Card 4: HQ Admin */}
+            <a
+              href="https://456.coffee-cafe.shop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:bg-white/10 transition-all group flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    HQ Admin
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
+                    ระบบจัดการหลังบ้าน HQ
+                  </h3>
+                  <p className="text-xs text-[#9B8C7E] mt-1 leading-relaxed">
+                    ศูนย์ควบคุมคลัง วัตถุดิบ บัญชี และรายงานยอดขายรายวัน
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-blue-400 group-hover:text-blue-300">
+                <span>456.coffee-cafe.shop</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 5. STORE LOCATION & INTERACTIVE MAP (ข้อมูลจริง สบายตา) */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section id="ch-network-map" className="px-4 sm:px-6 lg:px-8 py-10 max-w-7xl mx-auto">
+        <div className="ch-card p-6 sm:p-8 space-y-6">
+          
+          {/* Header & Branch Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+            <div>
+              <div className="text-xs font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-orange-400" /> แผนที่และที่ตั้งร้านค้า
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+                สาขา 456 Coffee ในจังหวัดกาฬสินธุ์
+              </h2>
+            </div>
+
+            {/* Branch Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {branchesList.map((branch, index) => (
+                <button
+                  key={branch.id}
+                  onClick={() => setSelectedBranchIndex(index)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    selectedBranchIndex === index
+                      ? 'bg-orange-600 text-white shadow-md shadow-orange-950/40'
+                      : 'bg-white/5 text-[#A68A78] hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {branch.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Branch Details & Embedded Map */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            {/* Left Detail Panel */}
+            <div className="lg:col-span-5 space-y-5 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-orange-600/20 text-orange-400 border border-orange-500/30">
+                    {realStore.badge}
+                  </span>
+                  <h3 className="text-xl font-bold text-white">
+                    {realStore.name}
+                  </h3>
+                  <p className="text-xs text-[#A68A78]">
+                    {realStore.englishName}
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 text-xs text-[#C8B8A6] pt-1">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+                    <span>{realStore.address}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Clock className="w-4 h-4 text-orange-400 shrink-0" />
+                    <span>{realStore.hours}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Phone className="w-4 h-4 text-orange-400 shrink-0" />
+                    <span>{realStore.phone}</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#9B8C7E] leading-relaxed pt-2 border-t border-white/5">
+                  {realStore.description}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2">
+                  <a
+                    href={realStore.googleMapsDirectionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-3 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 font-bold text-xs text-white text-center flex items-center justify-center gap-2 shadow-md shadow-orange-950/40 transition-all"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>นำทางด้วย Google Maps</span>
+                  </a>
+
+                  <button
+                    onClick={copyCoordinates}
+                    className="py-3 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    title="คัดลอกพิกัด GPS"
+                  >
+                    {copiedCoordinates ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedCoordinates ? 'คัดลอกแล้ว' : 'พิกัด GPS'}</span>
+                  </button>
+                </div>
+
+                <a
+                  href={`tel:${realStore.phone.replace(/[^0-9]/g, '')}`}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-[#C8B8A6] hover:text-white font-medium text-xs text-center flex items-center justify-center gap-2 transition-colors border border-white/5"
+                >
+                  <Phone className="w-3.5 h-3.5 text-orange-400" />
+                  <span>โทรสอบถามหน้าร้าน: {realStore.phone}</span>
+                </a>
+              </div>
+
+            </div>
+
+            {/* Right Map Embed */}
+            <div className="lg:col-span-7 h-72 sm:h-96 rounded-2xl overflow-hidden border border-white/10 ch-map-frame">
+              <iframe
+                title={`แผนที่ ${realStore.name}`}
+                src={realStore.embedMapUrl}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen={false}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 6. LATEST STORIES & COMMUNITY NEWS */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section id="ch-news-section" className="px-4 sm:px-6 lg:px-8 py-10 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="text-xs font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" /> ข่าวสารและเรื่องราวชุมชน
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+              อัปเดตความเคลื่อนไหวกาแฟภูพาน
+            </h2>
+          </div>
+          <span className="text-xs text-[#8A7969]">
+            บทความ เทคนิค และกิจกรรมล่าสุด
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {newsList.map((item) => (
+            <div
+              key={item.id}
+              className="ch-card overflow-hidden rounded-2xl group flex flex-col justify-between"
+            >
+              <div className="aspect-[16/10] overflow-hidden relative">
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#140A04]/80 text-orange-300 border border-white/10 backdrop-blur-md">
+                  {item.category}
+                </span>
+              </div>
+              <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                <div className="space-y-1.5">
+                  <div className="text-[11px] text-[#8A7969]">{item.date}</div>
+                  <h3 className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors leading-snug">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-[#9B8C7E] line-clamp-2 leading-relaxed">
+                    {item.summary}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 7. JOIN NETWORK CALL TO ACTION */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section id="join-network" className="px-4 sm:px-6 lg:px-8 py-10 max-w-7xl mx-auto">
+        <div className="p-6 sm:p-10 rounded-3xl bg-gradient-to-r from-orange-950/60 via-[#1C0F08] to-[#120803] border border-orange-500/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+          <div className="space-y-2 text-center md:text-left">
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              ร่วมเป็นส่วนหนึ่งของเครือข่าย 456 COFFEE FARM
+            </h2>
+            <p className="text-xs sm:text-sm text-[#C8B8A6] max-w-xl">
+              ยินดีต้อนรับเจ้าของร้านกาแฟ เกษตรกรผู้ปลูกกาแฟ และผู้สนใจเริ่มต้นธุรกิจร้านกาแฟทั่วประเทศ
             </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+            <button
+              onClick={() => setJoinModalOpen(true)}
+              className="px-6 py-3.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-950/50 flex items-center gap-2 transition-all transform hover:scale-105"
+            >
+              <Users className="w-4 h-4" />
+              <span>เข้าร่วมเครือข่ายทันที</span>
+            </button>
+
+            <a
+              href="tel:0613055625"
+              className="px-5 py-3.5 rounded-xl font-semibold text-xs sm:text-sm text-white bg-white/10 hover:bg-white/15 border border-white/10 flex items-center gap-2 transition-colors"
+            >
+              <Phone className="w-4 h-4 text-orange-400" />
+              <span>061-305-5625</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 8. FOOTER - STRUCTURED ACCORDING TO SUBMENUS */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <footer id="ch-footer-section" className="bg-[#0A0402] border-t border-white/10 pt-12 pb-8 px-4 sm:px-6 lg:px-8 text-[#A89887]">
+        <div className="max-w-7xl mx-auto space-y-10">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+            
+            {/* Col 1: Brand Info */}
+            <div className="lg:col-span-2 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white">
+                  <Coffee className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-heading font-black text-lg text-white">
+                      COFFEE <span className="text-[#EA580C]">FARM</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 text-[9px] font-bold text-orange-400 border border-orange-500/40 rounded bg-orange-600/10">
+                      HUB
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#8A7969]">ระบบนิเวศกาแฟโรบัสต้าภูพาน</p>
+                </div>
+              </div>
+              <p className="text-xs text-[#9B8C7E] leading-relaxed max-w-sm">
+                เชื่อมโยงเกษตรกรแปลงปลูก สถาบันอบรม และคาเฟ่คุณภาพ เพื่อยกระดับกาแฟไทยอย่างยั่งยืน
+              </p>
+              <div className="text-xs text-[#8A7969] space-y-1 pt-1">
+                <div>สำนักงานใหญ่ & สาขาหลัก: อ.เมือง จ.กาฬสินธุ์</div>
+                <div>โทรศัพท์: 061-305-5625</div>
+              </div>
+            </div>
+
+            {/* Col 2: เกี่ยวกับเรา */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                เกี่ยวกับเรา
+              </h4>
+              <ul className="space-y-2 text-xs text-[#C5B3A1]">
+                <li><a href="#story-origin" className="hover:text-orange-400 transition-colors">เรื่องราวกาแฟภูพาน</a></li>
+                <li><a href="#ecosystem-pillars" className="hover:text-orange-400 transition-colors">วิสัยทัศน์ 456</a></li>
+                <li><a href="#ch-news-section" className="hover:text-orange-400 transition-colors">ข่าวสาร & กิจกรรม</a></li>
+                <li><a href="/js-develop" className="hover:text-orange-400 transition-colors text-orange-400">ระบบเดิม (JS DEVELOP)</a></li>
+              </ul>
+            </div>
+
+            {/* Col 3: 3 เสาหลัก */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                ระบบนิเวศ 3 เสาหลัก
+              </h4>
+              <ul className="space-y-2 text-xs text-[#C5B3A1]">
+                <li><a href="#pathway-plantation" className="hover:text-emerald-400 transition-colors">🌿 แปลงปลูก & ต้นพันธุ์</a></li>
+                <li><a href="#pathway-academy" className="hover:text-amber-400 transition-colors">🎓 456 Coffee Academy</a></li>
+                <li><a href="#ch-network-map" className="hover:text-orange-400 transition-colors">☕ คาเฟ่ 456 Coffee</a></li>
+                <li><a href="#ch-network-map" className="hover:text-white transition-colors">🗺️ แผนที่ร้านค้าสาขา</a></li>
+              </ul>
+            </div>
+
+            {/* Col 4: แพลตฟอร์มดิจิทัล & AI */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                เทคโนโลยีดิจิทัล & AI
+              </h4>
+              <ul className="space-y-2 text-xs text-[#C5B3A1]">
+                <li>
+                  <a
+                    href="https://coffee-phupan.ai.studio/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-emerald-300 text-emerald-400 font-semibold transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" /> AI Studio กาแฟภูพาน
+                  </a>
+                </li>
+                <li>
+                  <a href="https://order.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                    แอปสั่งซื้อลูกค้า (LIFF)
+                  </a>
+                </li>
+                <li>
+                  <a href="https://pos.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                    ระบบขายหน้าร้าน (Branch POS)
+                  </a>
+                </li>
+                <li>
+                  <a href="https://456.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                    ระบบหลังบ้าน (HQ Admin)
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8A7969]">
+            <p>© {new Date().getFullYear()} COFFEE FARM / 456 COFFEE HUB. สงวนลิขสิทธิ์ทุกประการ.</p>
+            <p>Good Coffee · Better People · Stronger Communities</p>
           </div>
 
         </div>
@@ -1068,7 +1328,7 @@ export default function CoffeeHubHomepage() {
                 <Users className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold text-white">
-                เข้าร่วมเครือข่าย 456 COFFEE HUB
+                เข้าร่วมเครือข่าย 456 COFFEE FARM
               </h3>
               <p className="text-xs text-[#C8B8A6]">
                 ยินดีต้อนรับเจ้าของร้านกาแฟ เกษตรกรผู้ปลูกกาแฟ และผู้สนใจพัฒนาทักษะบาริสต้า
@@ -1084,12 +1344,14 @@ export default function CoffeeHubHomepage() {
               >
                 <Sparkles className="w-4 h-4 text-emerald-200" /> เข้าสู่ระบบ AI Studio กาแฟภูพาน
               </a>
+
               <a
                 href="tel:0613055625"
                 className="w-full py-3 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 font-semibold text-center flex items-center justify-center gap-2 text-white shadow-lg shadow-orange-950/40"
               >
                 <Phone className="w-4 h-4" /> โทร 061-305-5625
               </a>
+
               <a
                 href="/js-develop#academy"
                 onClick={() => setJoinModalOpen(false)}
@@ -1097,6 +1359,7 @@ export default function CoffeeHubHomepage() {
               >
                 <GraduationCap className="w-4 h-4 text-amber-400" /> ลงทะเบียน 456 Academy
               </a>
+
               <a
                 href="/js-develop#plantations"
                 onClick={() => setJoinModalOpen(false)}
