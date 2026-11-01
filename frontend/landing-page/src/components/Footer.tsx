@@ -20,7 +20,7 @@ export function Footer() {
               </div>
               <div>
                 <span className="font-heading font-black text-2xl tracking-tight text-white">
-                  COFFEE <span className="text-[#EA580C]">FARM</span>
+                  456COFFEE <span className="text-[#EA580C]">CAFE</span>
                 </span>
                 <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EA580C]/20 text-[#EA580C]">
                   ECOSYSTEM

@@ -335,7 +335,7 @@ export default function CoffeeHubHomepage() {
           <a
             href="/"
             className="flex items-center gap-3.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-xl p-1"
-            aria-label="COFFEE FARM หน้าแรก"
+            aria-label="456COFFEE CAFE หน้าแรก"
           >
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#EA580C] via-[#C2410C] to-[#9A3412] flex items-center justify-center shadow-lg shadow-orange-950/40 group-hover:scale-105 transition-transform border border-orange-400/30">
               <Coffee className="w-6 h-6 text-white" strokeWidth={2.2} />
@@ -343,7 +343,7 @@ export default function CoffeeHubHomepage() {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-heading font-black text-xl tracking-tight text-white group-hover:text-orange-400 transition-colors">
-                  COFFEE <span className="text-[#EA580C]">FARM</span>
+                  456COFFEE <span className="text-[#EA580C]">CAFE</span>
                 </span>
                 <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-orange-400 border border-orange-500/40 rounded-md bg-orange-600/15">
                   HUB
@@ -641,7 +641,7 @@ export default function CoffeeHubHomepage() {
             {/* Main Headline */}
             <div className="space-y-3">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
-                COFFEE <span className="ch-hero-gradient-text">FARM</span>
+                456COFFEE <span className="ch-hero-gradient-text">CAFE</span>
               </h1>
               <p className="text-lg sm:text-xl text-[#E8D8C8] font-semibold leading-relaxed">
                 จากยอดภูพาน สู่คาเฟ่มาตรฐานสากล ขับเคลื่อนด้วยเทคโนโลยี AI
@@ -1177,7 +1177,7 @@ export default function CoffeeHubHomepage() {
         <div className="p-6 sm:p-10 rounded-3xl bg-gradient-to-r from-orange-950/60 via-[#1C0F08] to-[#120803] border border-orange-500/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
           <div className="space-y-2 text-center md:text-left">
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              ร่วมเป็นส่วนหนึ่งของเครือข่าย 456 COFFEE FARM
+              ร่วมเป็นส่วนหนึ่งของเครือข่าย 456COFFEE CAFE
             </h2>
             <p className="text-xs sm:text-sm text-[#C8B8A6] max-w-xl">
               ยินดีต้อนรับเจ้าของร้านกาแฟ เกษตรกรผู้ปลูกกาแฟ และผู้สนใจเริ่มต้นธุรกิจร้านกาแฟทั่วประเทศ
@@ -1221,7 +1221,7 @@ export default function CoffeeHubHomepage() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="font-heading font-black text-lg text-white">
-                      COFFEE <span className="text-[#EA580C]">FARM</span>
+                      456COFFEE <span className="text-[#EA580C]">CAFE</span>
                     </span>
                     <span className="px-1.5 py-0.2 text-[9px] font-bold text-orange-400 border border-orange-500/40 rounded bg-orange-600/10">
                       HUB
@@ -1302,7 +1302,7 @@ export default function CoffeeHubHomepage() {
           </div>
 
           <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8A7969]">
-            <p>© {new Date().getFullYear()} COFFEE FARM / 456 COFFEE HUB. สงวนลิขสิทธิ์ทุกประการ.</p>
+            <p>© {new Date().getFullYear()} 456COFFEE CAFE / 456 COFFEE HUB. สงวนลิขสิทธิ์ทุกประการ.</p>
             <p>Good Coffee · Better People · Stronger Communities</p>
           </div>
 
@@ -1328,7 +1328,7 @@ export default function CoffeeHubHomepage() {
                 <Users className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold text-white">
-                เข้าร่วมเครือข่าย 456 COFFEE FARM
+                เข้าร่วมเครือข่าย 456COFFEE CAFE
               </h3>
               <p className="text-xs text-[#C8B8A6]">
                 ยินดีต้อนรับเจ้าของร้านกาแฟ เกษตรกรผู้ปลูกกาแฟ และผู้สนใจพัฒนาทักษะบาริสต้า
