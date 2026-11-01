@@ -222,11 +222,12 @@ export default function CoffeeHubHomepage() {
           badge: 'กลางน้ำ'
         },
         {
-          title: 'ปลายน้ำ · คาเฟ่ 456 Coffee',
-          description: 'สาขาหลักกาฬสินธุ์ และเครือข่ายร้านกาแฟ Specialty ในชุมชน',
-          href: '#ch-network-map',
-          icon: Coffee,
-          badge: 'ปลายน้ำ'
+          title: 'ปลายน้ำ · ร้านสาขา & สั่งซื้อผ่านแอป',
+          description: 'สั่งซื้อเครื่องดื่มหน้าร้านและเดลิเวอรีผ่านแอปของลูกค้า',
+          href: 'https://buyer-liff.vercel.app',
+          icon: Smartphone,
+          badge: 'แอปซื้อของ',
+          isExternal: true
         }
       ]
     },
@@ -245,17 +246,18 @@ export default function CoffeeHubHomepage() {
         },
         {
           title: 'แอปสั่งซื้อลูกค้าออนไลน์',
-          description: 'สั่งกาแฟล่วงหน้า สะสมแต้ม ไม่ต้องรอคิว (order.coffee-cafe.shop)',
-          href: 'https://order.coffee-cafe.shop',
+          description: 'สั่งกาแฟล่วงหน้า สะสมแต้ม ไม่ต้องรอคิว (Customer App)',
+          href: 'https://buyer-liff.vercel.app',
           icon: Smartphone,
-          badge: 'LIFF App',
+          badge: 'แอปซื้อของ',
           isExternal: true
         },
         {
           title: 'ระบบแคชเชียร์สาขา (Branch POS)',
           description: 'ระบบขายหน้าร้าน จอสองฝั่ง พร้อมเชื่อมต่อออเดอร์ทันที',
-          href: 'https://pos.coffee-cafe.shop',
+          href: 'https://branch-pos-mu.vercel.app',
           icon: Monitor,
+          badge: 'POS สาขา',
           isExternal: true
         },
         {
@@ -831,13 +833,25 @@ export default function CoffeeHubHomepage() {
               </p>
             </div>
             
-            <a
-              href="#ch-network-map"
-              className="w-full py-2.5 rounded-xl bg-orange-600/30 hover:bg-orange-600 border border-orange-500/40 text-orange-200 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
-            >
-              <span>ดูตำแหน่งสาขา & แผนที่</span>
-              <ChevronRight className="w-4 h-4" />
-            </a>
+            <div className="space-y-2">
+              <a
+                href="https://buyer-liff.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-950/40 transition-all transform hover:scale-[1.01]"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>สั่งซื้อผ่านแอปซื้อของลูกค้า</span>
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
+              <a
+                href="#ch-network-map"
+                className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[#C8B8A6] hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
+              >
+                <span>ดูตำแหน่งที่ตั้งสาขาบนแผนที่</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
 
         </div>
@@ -920,6 +934,17 @@ export default function CoffeeHubHomepage() {
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
+                <a
+                  href="https://buyer-liff.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-500 hover:to-emerald-600 font-bold text-xs sm:text-sm text-white text-center flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all transform hover:scale-[1.01]"
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-200" />
+                  <span>สั่งซื้อเครื่องดื่มสาขานี้ผ่านแอป (แอปซื้อของลูกค้า)</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </a>
+
                 <div className="flex items-center gap-2">
                   <a
                     href={realStore.googleMapsDirectionsUrl}
@@ -1111,7 +1136,7 @@ export default function CoffeeHubHomepage() {
               <ul className="space-y-2 text-xs text-[#C5B3A1]">
                 <li><a href="#pathway-plantation" className="hover:text-emerald-400 transition-colors">🌿 แปลงปลูก & ต้นพันธุ์</a></li>
                 <li><a href="#pathway-academy" className="hover:text-amber-400 transition-colors">🎓 456 Coffee Academy</a></li>
-                <li><a href="#ch-network-map" className="hover:text-orange-400 transition-colors">☕ คาเฟ่ 456 Coffee</a></li>
+                <li><a href="https://buyer-liff.vercel.app" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors flex items-center gap-1">☕ สั่งกาแฟผ่านแอปสาขา <ArrowUpRight className="w-3 h-3 text-orange-400" /></a></li>
                 <li><a href="#ch-network-map" className="hover:text-white transition-colors">🗺️ แผนที่ร้านค้าสาขา</a></li>
               </ul>
             </div>
@@ -1133,18 +1158,18 @@ export default function CoffeeHubHomepage() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://order.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                    แอปสั่งซื้อลูกค้า (LIFF)
+                  <a href="https://buyer-liff.vercel.app" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+                    แอปสั่งซื้อลูกค้า (Customer App) <ArrowUpRight className="w-3 h-3 text-white/50" />
                   </a>
                 </li>
                 <li>
-                  <a href="https://pos.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                    ระบบขายหน้าร้าน (Branch POS)
+                  <a href="https://branch-pos-mu.vercel.app" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+                    ระบบขายหน้าร้าน (Branch POS) <ArrowUpRight className="w-3 h-3 text-white/50" />
                   </a>
                 </li>
                 <li>
-                  <a href="https://456.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                    ระบบหลังบ้าน (HQ Admin)
+                  <a href="https://456.coffee-cafe.shop" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+                    ระบบหลังบ้าน (HQ Admin) <ArrowUpRight className="w-3 h-3 text-white/50" />
                   </a>
                 </li>
               </ul>
